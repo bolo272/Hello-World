@@ -1,0 +1,30 @@
+import requests
+from bs4 import BeautifulSoup
+
+
+def pracuj_spider(max_pages):
+    page = 1
+    while page <= max_pages:
+        url = 'http://www.pracuj.pl/praca/Reklama;kw/Warszawa;wp?pn=' + str(page)
+        source_code = requests.get(url)
+        plain_text = source_code.text
+        soup = BeautifulSoup(plain_text, 'html.parser')
+        for link in soup.findAll('a', {'class': 'offer__list_item_link_name'}):
+            title = link.string
+            href = "http://pracuj.pl" + link.get('href')
+            single_item(href)
+            print(title)
+            print(href)
+
+            page += 1
+
+
+def single_item(item_url):
+    source_code = requests.get(item_url)
+    plain_text = source_code.text
+    soup = BeautifulSoup(plain_text, 'html.parser')
+    for item_name in soup.findAll('span', {'itemprop': 'name'}):
+        print(item_name.string)
+
+
+pracuj_spider(1)
