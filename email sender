@@ -1,0 +1,38 @@
+#-*- coding: windows-1250 -*-
+import smtplib, xlrd
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+workbook = xlrd.open_workbook('emailtestlist.xlsx')
+sheet = workbook.sheet_by_name('Arkusz1')
+email_list = []
+for rows in range(sheet.nrows):
+    email_list.append(sheet.cell_value(rows, 1))
+print(email_list)
+
+f = open('newtxt.txt', 'r')
+text = f.read()
+file = MIMEApplication(open('CV.pdf', 'rb').read())
+
+mail = smtplib.SMTP('smtp.gmail.com:587')
+mail.ehlo()
+mail.starttls()
+mail.ehlo()
+mail.login('email@gmail.com', 'password')
+
+
+for email in email_list:
+    fromaddr = 'email@gmail.com'
+    to = email
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = email
+    msg['Subject'] = 'Tytu'
+    msg.attach(MIMEText(text))
+    file.add_header('Content-Disposition', 'attachment', filename='CV.pdf')
+    msg.attach(file)
+    mail.sendmail(fromaddr, to, msg.as_string())
+mail.close()
+
+
