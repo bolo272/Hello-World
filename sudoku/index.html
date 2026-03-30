@@ -2,62 +2,53 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Sudoku</title>
   <style>
-    /* ─── Reset & Base ─────────────────────────────────────────────────────── */
+    /* ── Reset ──────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:           #f0f4f8;
+      --bg:           #f5f7fa;
       --surface:      #ffffff;
-      --surface2:     #e8edf3;
-      --border:       #c8d0da;
-      --border-box:   #7a8a9e;
-      --text:         #1a2332;
-      --text-muted:   #6b7a8d;
-      --accent:       #1565c0;
-      --accent-light: #e3eeff;
-      --highlight:    #dce8ff;
-      --same-num:     #c8d8f8;
-      --error:        #ffdddd;
-      --error-text:   #c62828;
-      --given:        #1a2332;
-      --user:         #1565c0;
-      --note:         #5577aa;
-      --complete:     #2e7d32;
-      --btn-bg:       #1565c0;
-      --btn-text:     #fff;
-      --shadow:       0 2px 12px rgba(0,0,0,.10);
-      --radius:       10px;
-      --cell-size:    54px;
+      --border:       #d4dae3;
+      --border-box:   #4a5568;
+      --text:         #1a2b4a;
+      --text-muted:   #8896aa;
+      --accent:       #2b5fce;
+      --accent-light: #dde8ff;
+      --highlight:    #dde8ff;
+      --same-num:     #c4d4f5;
+      --error:        #ffe5e5;
+      --error-text:   #c0392b;
+      --given:        #1a2b4a;
+      --user:         #2b5fce;
+      --note:         #5577bb;
+      --shadow:       0 2px 16px rgba(0,0,0,.09);
+      --radius:       12px;
     }
 
     [data-theme="dark"] {
-      --bg:           #111827;
-      --surface:      #1f2937;
-      --surface2:     #2d3748;
-      --border:       #374151;
-      --border-box:   #6b7280;
-      --text:         #f1f5f9;
-      --text-muted:   #9ca3af;
+      --bg:           #0f172a;
+      --surface:      #1e293b;
+      --border:       #334155;
+      --border-box:   #64748b;
+      --text:         #e2e8f0;
+      --text-muted:   #64748b;
       --accent:       #60a5fa;
       --accent-light: #1e3a5f;
       --highlight:    #1e3a5f;
-      --same-num:     #1a3050;
-      --error:        #3b1212;
+      --same-num:     #172d4a;
+      --error:        #3b1111;
       --error-text:   #f87171;
-      --given:        #f1f5f9;
+      --given:        #e2e8f0;
       --user:         #60a5fa;
-      --note:         #93bbea;
-      --complete:     #4ade80;
-      --btn-bg:       #2563eb;
-      --btn-text:     #fff;
-      --shadow:       0 2px 12px rgba(0,0,0,.40);
+      --note:         #93c5fd;
+      --shadow:       0 2px 16px rgba(0,0,0,.4);
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -67,811 +58,769 @@
       transition: background .3s, color .3s;
     }
 
-    /* ─── Header ───────────────────────────────────────────────────────────── */
+    /* ── Header ─────────────────────────────────────────────────────────── */
     header {
       width: 100%;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 12px 24px;
+      max-width: 480px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      padding: 14px 16px 8px;
     }
 
     .logo {
-      font-size: 1.6rem;
+      font-size: 1.35rem;
       font-weight: 800;
-      letter-spacing: -0.5px;
       color: var(--accent);
+      letter-spacing: -.5px;
     }
     .logo span { color: var(--text); }
 
-    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+
+    .new-game-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .new-game-btn:hover { opacity: .88; }
 
     .theme-btn {
       background: none;
-      border: 2px solid var(--border);
-      border-radius: 50%;
-      width: 38px; height: 38px;
+      border: none;
+      font-size: 1.2rem;
       cursor: pointer;
-      font-size: 1.1rem;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text);
-      transition: border-color .2s, background .2s;
+      padding: 4px;
+      line-height: 1;
     }
-    .theme-btn:hover { background: var(--surface2); border-color: var(--accent); }
 
-    /* ─── Main Layout ──────────────────────────────────────────────────────── */
-    main {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-      padding: 24px;
-      justify-content: center;
-      max-width: 900px;
+    /* ── Wrapper ─────────────────────────────────────────────────────────── */
+    .game-wrapper {
       width: 100%;
-    }
-
-    /* ─── Left Panel ───────────────────────────────────────────────────────── */
-    .left-panel {
+      max-width: 480px;
+      padding: 0 12px 24px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      align-items: center;
+      gap: 12px;
     }
 
-    /* ─── Difficulty ───────────────────────────────────────────────────────── */
+    /* ── Difficulty bar ──────────────────────────────────────────────────── */
     .difficulty-bar {
       display: flex;
-      gap: 6px;
-      background: var(--surface);
-      padding: 6px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      gap: 4px;
+      justify-content: center;
     }
-
     .diff-btn {
-      padding: 6px 14px;
-      border: none;
-      border-radius: 7px;
-      cursor: pointer;
-      font-size: .8rem;
-      font-weight: 600;
-      background: transparent;
+      padding: 5px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
       color: var(--text-muted);
-      transition: background .2s, color .2s;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
     }
     .diff-btn.active, .diff-btn:hover {
       background: var(--accent);
+      border-color: var(--accent);
       color: #fff;
     }
 
-    /* ─── Stats bar ────────────────────────────────────────────────────────── */
+    /* ── Stats ───────────────────────────────────────────────────────────── */
     .stats-bar {
       display: flex;
-      gap: 20px;
+      justify-content: space-between;
       background: var(--surface);
-      padding: 10px 20px;
       border-radius: var(--radius);
+      padding: 10px 16px;
       box-shadow: var(--shadow);
-      font-size: .85rem;
-      font-weight: 600;
-      align-items: center;
     }
-    .stat-item { display: flex; flex-direction: column; align-items: center; }
-    .stat-label { font-size: .7rem; color: var(--text-muted); font-weight: 400; text-transform: uppercase; letter-spacing: .5px; }
-    .stat-value { color: var(--text); font-size: 1rem; }
+    .stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .stat-label {
+      font-size: .65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .stat-value { font-size: .9rem; font-weight: 700; color: var(--text); }
     #timer { font-variant-numeric: tabular-nums; }
+    #errorDisplay { color: var(--error-text); }
 
-    /* ─── Board ────────────────────────────────────────────────────────────── */
-    .board-wrapper {
+    /* ── Board ───────────────────────────────────────────────────────────── */
+    .board-outer {
       background: var(--surface);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 10px;
+      padding: 8px;
     }
 
     #board {
       display: grid;
-      grid-template-columns: repeat(9, var(--cell-size));
-      grid-template-rows: repeat(9, var(--cell-size));
-      border: 2.5px solid var(--border-box);
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows:    repeat(9, 1fr);
+      border: 2px solid var(--border-box);
       border-radius: 4px;
       overflow: hidden;
+      aspect-ratio: 1;
+      width: 100%;
       user-select: none;
     }
 
     .cell {
-      width: var(--cell-size);
-      height: var(--cell-size);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.4rem;
-      font-weight: 600;
+      font-size: clamp(.8rem, 3.8vw, 1.35rem);
+      font-weight: 700;
       cursor: pointer;
-      position: relative;
       background: var(--surface);
       color: var(--given);
       transition: background .1s;
       border-right: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
+      position: relative;
     }
 
     /* Box borders */
-    .cell:nth-child(3n)   { border-right: 2.5px solid var(--border-box); }
-    .cell:nth-child(9n)   { border-right: 2.5px solid var(--border-box); }
-    .cell[data-row="2"]   { border-bottom: 2.5px solid var(--border-box); }
-    .cell[data-row="5"]   { border-bottom: 2.5px solid var(--border-box); }
-    .cell[data-row="8"]   { border-bottom: 2.5px solid var(--border-box); }
+    .cell:nth-child(3n):not(:nth-child(9n)) { border-right: 2px solid var(--border-box); }
+    .cell[data-row="2"], .cell[data-row="5"] { border-bottom: 2px solid var(--border-box); }
+    .cell[data-row="8"] { border-bottom: 2px solid var(--border-box); }
+    .cell:nth-child(9n) { border-right: 2px solid var(--border-box); }
 
-    .cell.given  { color: var(--given); }
     .cell.user-filled { color: var(--user); }
-
     .cell.highlighted  { background: var(--highlight); }
     .cell.same-number  { background: var(--same-num); }
-    .cell.selected     { background: var(--accent-light); }
-    .cell.selected.highlighted { background: var(--accent-light); }
-    .cell.error        { color: var(--error-text) !important; background: var(--error); }
+    .cell.selected     { background: var(--accent-light) !important; }
+    .cell.error        { color: var(--error-text) !important; background: var(--error) !important; }
+    .cell:hover:not(.selected) { background: var(--highlight); }
 
-    .cell:hover:not(.selected) { background: var(--surface2); }
-
-    /* Notes grid inside cell */
+    /* Notes */
     .notes-grid {
       display: grid;
       grid-template-columns: repeat(3,1fr);
       grid-template-rows: repeat(3,1fr);
-      width: 100%;
-      height: 100%;
-      padding: 2px;
+      width: 100%; height: 100%;
+      padding: 1px;
     }
     .note-num {
-      font-size: .58rem;
+      font-size: clamp(.38rem, 1.1vw, .52rem);
       font-weight: 500;
       color: var(--note);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
 
-    /* ─── Complete Banner ──────────────────────────────────────────────────── */
-    .complete-banner {
+    /* ── Complete banner ─────────────────────────────────────────────────── */
+    .banner {
       display: none;
-      background: var(--surface);
-      border: 2px solid var(--complete);
-      border-radius: var(--radius);
-      padding: 12px 24px;
       text-align: center;
-      color: var(--complete);
+      padding: 14px 20px;
+      border-radius: var(--radius);
       font-weight: 700;
-      font-size: 1.1rem;
-      box-shadow: var(--shadow);
+      font-size: 1rem;
       animation: pop .4s ease;
+      box-shadow: var(--shadow);
     }
-    .complete-banner.show { display: block; }
+    .banner.success {
+      background: #e8f8ee;
+      color: #1a7a3a;
+      border: 2px solid #1a7a3a;
+    }
+    .banner.gameover {
+      background: #fde8e8;
+      color: #c0392b;
+      border: 2px solid #c0392b;
+    }
+    [data-theme="dark"] .banner.success  { background: #0f2e1a; color: #4ade80; border-color: #4ade80; }
+    [data-theme="dark"] .banner.gameover { background: #2e0f0f; color: #f87171; border-color: #f87171; }
+    .banner.show { display: block; }
     @keyframes pop {
       0%   { transform: scale(.8); opacity: 0; }
-      70%  { transform: scale(1.05); }
+      70%  { transform: scale(1.04); }
       100% { transform: scale(1); opacity: 1; }
     }
 
-    /* ─── Right Panel ──────────────────────────────────────────────────────── */
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      align-items: center;
-      width: 220px;
-    }
-
-    /* ─── Number Pad ───────────────────────────────────────────────────────── */
-    .numpad {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      background: var(--surface);
-      padding: 14px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      width: 100%;
-    }
-
-    .num-btn {
-      aspect-ratio: 1;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface2);
-      color: var(--text);
-      font-size: 1.4rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s, border-color .15s, transform .1s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .num-btn:hover { background: var(--accent-light); border-color: var(--accent); }
-    .num-btn:active { transform: scale(.93); }
-    .num-btn.complete-num {
-      opacity: .35;
-      pointer-events: none;
-    }
-    .num-count {
-      font-size: .6rem;
-      font-weight: 400;
-      color: var(--text-muted);
-    }
-
-    /* ─── Action Buttons ───────────────────────────────────────────────────── */
+    /* ── Action row ──────────────────────────────────────────────────────── */
     .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .action-btn {
-      padding: 9px 6px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
+      display: flex;
+      justify-content: space-around;
       background: var(--surface);
-      color: var(--text);
-      font-size: .78rem;
-      font-weight: 600;
+      border-radius: var(--radius);
+      padding: 12px 8px 8px;
+      box-shadow: var(--shadow);
+    }
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
       cursor: pointer;
-      transition: background .15s, border-color .15s;
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 8px;
+      transition: background .15s;
+      position: relative;
+    }
+    .action-btn:hover { background: var(--highlight); }
+    .action-btn .icon {
+      font-size: 1.3rem;
+      line-height: 1;
+      position: relative;
+    }
+    .action-btn .lbl {
+      font-size: .65rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .badge {
+      position: absolute;
+      top: -6px; right: -8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: .55rem;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 5px;
+      min-width: 16px;
+      text-align: center;
+    }
+    .notes-toggle {
+      position: absolute;
+      top: -6px; right: -14px;
+      background: var(--text-muted);
+      color: #fff;
+      font-size: .5rem;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+    .notes-toggle.on { background: var(--accent); }
+
+    /* ── Numpad ──────────────────────────────────────────────────────────── */
+    .numpad {
+      display: flex;
+      justify-content: space-between;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px 6px;
+      box-shadow: var(--shadow);
+      gap: 2px;
+    }
+    .num-btn {
+      flex: 1;
+      aspect-ratio: .75;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: clamp(1.4rem, 5vw, 1.9rem);
+      font-weight: 800;
+      cursor: pointer;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      transition: background .12s;
+      position: relative;
     }
-    .action-btn:hover { background: var(--accent-light); border-color: var(--accent); }
-    .action-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-    .new-game-btn {
-      width: 100%;
-      padding: 11px;
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      border: none;
-      border-radius: 9px;
-      font-size: .95rem;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 3px 10px rgba(21,101,192,.25);
-      transition: opacity .15s, transform .1s;
-    }
-    .new-game-btn:hover { opacity: .9; }
-    .new-game-btn:active { transform: scale(.97); }
-
-    /* ─── Responsive ───────────────────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      :root { --cell-size: 36px; }
-      .right-panel { width: 100%; }
-      .num-btn { font-size: 1rem; }
-      main { padding: 12px; gap: 14px; }
-    }
-    @media (max-width: 400px) {
-      :root { --cell-size: 32px; }
-    }
+    .num-btn:hover { background: var(--highlight); }
+    .num-btn:active { transform: scale(.92); }
+    .num-btn.done { opacity: .25; pointer-events: none; }
   </style>
 </head>
 <body>
 
-<!-- ─── Header ──────────────────────────────────────────────────────────────── -->
 <header>
   <div class="logo">su<span>doku</span></div>
   <div class="header-right">
-    <button class="theme-btn" id="themeBtn" title="Zmień motyw">🌙</button>
+    <button class="theme-btn" id="themeBtn">🌙</button>
+    <button class="new-game-btn" id="newGameBtn">Nowa gra</button>
   </div>
 </header>
 
-<!-- ─── Main ────────────────────────────────────────────────────────────────── -->
-<main>
-  <!-- Left -->
-  <div class="left-panel">
+<div class="game-wrapper">
 
-    <div class="difficulty-bar">
-      <button class="diff-btn active" data-diff="easy">Łatwy</button>
-      <button class="diff-btn" data-diff="medium">Średni</button>
-      <button class="diff-btn" data-diff="hard">Trudny</button>
-      <button class="diff-btn" data-diff="expert">Ekspert</button>
-    </div>
-
-    <div class="stats-bar">
-      <div class="stat-item">
-        <span class="stat-label">Czas</span>
-        <span class="stat-value" id="timer">00:00</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Błędy</span>
-        <span class="stat-value" id="errorCount">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Wskazówki</span>
-        <span class="stat-value" id="hintCount">0</span>
-      </div>
-    </div>
-
-    <div class="board-wrapper">
-      <div id="board"></div>
-    </div>
-
-    <div class="complete-banner" id="completeBanner">
-      🎉 Gratulacje! Ukończyłeś sudoku!
-    </div>
-
+  <!-- Difficulty -->
+  <div class="difficulty-bar">
+    <button class="diff-btn active" data-diff="easy">Łatwy</button>
+    <button class="diff-btn" data-diff="medium">Średni</button>
+    <button class="diff-btn" data-diff="hard">Trudny</button>
+    <button class="diff-btn" data-diff="expert">Ekspert</button>
   </div>
 
-  <!-- Right -->
-  <div class="right-panel">
-
-    <button class="new-game-btn" id="newGameBtn">Nowa gra</button>
-
-    <div class="numpad" id="numpad">
-      <!-- filled by JS -->
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-label">Trudność</span>
+      <span class="stat-value" id="diffLabel">Łatwy</span>
     </div>
-
-    <div class="actions">
-      <button class="action-btn" id="undoBtn">↩ Cofnij</button>
-      <button class="action-btn" id="eraseBtn">⌫ Wymaż</button>
-      <button class="action-btn" id="notesBtn">✏ Notatki</button>
-      <button class="action-btn" id="hintBtn">💡 Wskazówka</button>
+    <div class="stat">
+      <span class="stat-label">Błędy</span>
+      <span class="stat-value" id="errorDisplay">0/3</span>
     </div>
-
+    <div class="stat">
+      <span class="stat-label">Czas</span>
+      <span class="stat-value" id="timer">00:00</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Wskazówki</span>
+      <span class="stat-value" id="hintStat">0</span>
+    </div>
   </div>
-</main>
+
+  <!-- Board -->
+  <div class="board-outer">
+    <div id="board"></div>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner" id="banner"></div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="action-btn" id="undoBtn">
+      <span class="icon">↩</span>
+      <span class="lbl">Cofnij</span>
+    </button>
+    <button class="action-btn" id="eraseBtn">
+      <span class="icon">⌫</span>
+      <span class="lbl">Wymaż</span>
+    </button>
+    <button class="action-btn" id="notesBtn">
+      <span class="icon">✏️<span class="notes-toggle" id="notesToggle">OFF</span></span>
+      <span class="lbl">Notatki</span>
+    </button>
+    <button class="action-btn" id="hintBtn">
+      <span class="icon">💡<span class="badge" id="hintBadge">3</span></span>
+      <span class="lbl">Wskazówka</span>
+    </button>
+  </div>
+
+  <!-- Numpad -->
+  <div class="numpad" id="numpad"></div>
+
+</div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════════════
-   SUDOKU ENGINE
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════  SUDOKU ENGINE  ═══════════════════════════════════════ */
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.random() * (i+1) | 0;
+    [a[i],a[j]] = [a[j],a[i]];
   }
-  return arr;
+  return a;
 }
 
-/** Fill a 9x9 grid using backtracking. Returns flat 81-element array or null. */
-function fillGrid(grid = new Array(81).fill(0)) {
-  const idx = grid.indexOf(0);
-  if (idx === -1) return grid;
-  const row = Math.floor(idx / 9), col = idx % 9;
-  const nums = shuffle([1,2,3,4,5,6,7,8,9]);
-  for (const n of nums) {
-    if (isValid(grid, row, col, n)) {
-      grid[idx] = n;
-      if (fillGrid(grid)) return grid;
-      grid[idx] = 0;
+function fillGrid(g = new Array(81).fill(0)) {
+  const idx = g.indexOf(0);
+  if (idx === -1) return g;
+  const r = idx/9|0, c = idx%9;
+  for (const n of shuffle([1,2,3,4,5,6,7,8,9])) {
+    if (valid(g,r,c,n)) {
+      g[idx] = n;
+      if (fillGrid(g)) return g;
+      g[idx] = 0;
     }
   }
   return null;
 }
 
-function isValid(grid, row, col, n) {
-  for (let i = 0; i < 9; i++) {
-    if (grid[row*9+i] === n) return false;
-    if (grid[i*9+col] === n) return false;
+function valid(g,r,c,n) {
+  for (let i=0;i<9;i++) {
+    if (g[r*9+i]===n || g[i*9+c]===n) return false;
   }
-  const br = Math.floor(row/3)*3, bc = Math.floor(col/3)*3;
-  for (let r = br; r < br+3; r++)
-    for (let c = bc; c < bc+3; c++)
-      if (grid[r*9+c] === n) return false;
+  const br=r/3|0, bc=c/3|0;
+  for (let i=br*3;i<br*3+3;i++)
+    for (let j=bc*3;j<bc*3+3;j++)
+      if (g[i*9+j]===n) return false;
   return true;
 }
 
-/** Count solutions (stop after 2). */
-function countSolutions(grid, limit = 2) {
-  const idx = grid.indexOf(0);
-  if (idx === -1) return 1;
-  const row = Math.floor(idx / 9), col = idx % 9;
-  let count = 0;
-  for (let n = 1; n <= 9; n++) {
-    if (isValid(grid, row, col, n)) {
-      grid[idx] = n;
-      count += countSolutions(grid, limit);
-      grid[idx] = 0;
-      if (count >= limit) return count;
+function countSol(g, lim=2) {
+  const idx = g.indexOf(0);
+  if (idx===-1) return 1;
+  const r=idx/9|0, c=idx%9;
+  let cnt=0;
+  for (let n=1;n<=9;n++) {
+    if (valid(g,r,c,n)) {
+      g[idx]=n; cnt+=countSol(g,lim); g[idx]=0;
+      if (cnt>=lim) return cnt;
     }
   }
-  return count;
+  return cnt;
 }
 
-const REMOVE_COUNT = { easy: 36, medium: 46, hard: 52, expert: 58 };
+const REMOVE = {easy:36, medium:46, hard:52, expert:58};
 
-function generatePuzzle(difficulty = 'easy') {
-  const solution = fillGrid();
-  const puzzle = [...solution];
-  const cells = shuffle([...Array(81).keys()]);
-  let removed = 0;
-  const target = REMOVE_COUNT[difficulty];
-
-  for (const idx of cells) {
-    if (removed >= target) break;
-    const backup = puzzle[idx];
-    puzzle[idx] = 0;
-    const copy = [...puzzle];
-    if (countSolutions(copy) === 1) {
-      removed++;
-    } else {
-      puzzle[idx] = backup;
-    }
+function makePuzzle(diff='easy') {
+  const sol = fillGrid();
+  const puz = [...sol];
+  let rm=0;
+  for (const idx of shuffle([...Array(81).keys()])) {
+    if (rm >= REMOVE[diff]) break;
+    const bak=puz[idx]; puz[idx]=0;
+    if (countSol([...puz])===1) rm++;
+    else puz[idx]=bak;
   }
-  return { puzzle, solution };
+  return {puzzle:puz, solution:sol};
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   GAME STATE
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════  STATE  ════════════════════════════════════════════════ */
 
-const state = {
-  puzzle:     null,   // 81 ints, 0 = empty
-  solution:   null,
-  board:      null,   // user values (0 = empty)
-  notes:      null,   // array of Set
-  given:      null,   // bool[81]
-  selected:   -1,
-  notesMode:  false,
-  errors:     0,
-  hints:      0,
-  history:    [],     // for undo
-  timerSecs:  0,
-  timerInt:   null,
-  difficulty: 'easy',
-  complete:   false,
+const DIFF_LABELS = {easy:'Łatwy', medium:'Średni', hard:'Trudny', expert:'Ekspert'};
+const MAX_ERRORS = 3;
+const MAX_HINTS  = 3;
+
+const S = {
+  puzzle:null, solution:null, board:null, notes:null, given:null,
+  sel:-1, notesMode:false, errors:0, hints:MAX_HINTS,
+  history:[], timerSecs:0, timerInt:null,
+  diff:'easy', done:false, gameOver:false,
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DOM
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════  DOM REFS  ═════════════════════════════════════════════ */
 
-const boardEl   = document.getElementById('board');
-const numpadEl  = document.getElementById('numpad');
-const timerEl   = document.getElementById('timer');
-const errorEl   = document.getElementById('errorCount');
-const hintEl    = document.getElementById('hintCount');
-const bannerEl  = document.getElementById('completeBanner');
-const themeBtn  = document.getElementById('themeBtn');
-const newGameBtn= document.getElementById('newGameBtn');
-const undoBtn   = document.getElementById('undoBtn');
-const eraseBtn  = document.getElementById('eraseBtn');
-const notesBtn  = document.getElementById('notesBtn');
-const hintBtn   = document.getElementById('hintBtn');
+const boardEl     = document.getElementById('board');
+const numpadEl    = document.getElementById('numpad');
+const timerEl     = document.getElementById('timer');
+const errorEl     = document.getElementById('errorDisplay');
+const hintStatEl  = document.getElementById('hintStat');
+const diffLabelEl = document.getElementById('diffLabel');
+const bannerEl    = document.getElementById('banner');
+const themeBtn    = document.getElementById('themeBtn');
+const newGameBtn  = document.getElementById('newGameBtn');
+const undoBtn     = document.getElementById('undoBtn');
+const eraseBtn    = document.getElementById('eraseBtn');
+const notesBtn    = document.getElementById('notesBtn');
+const hintBtn     = document.getElementById('hintBtn');
+const notesToggle = document.getElementById('notesToggle');
+const hintBadge   = document.getElementById('hintBadge');
 
-/* ─── Theme ───────────────────────────────────────────────────────────────── */
-let darkMode = localStorage.getItem('sudoku-theme') === 'dark';
+/* ═══════════════════  THEME  ════════════════════════════════════════════════ */
+
+let dark = localStorage.getItem('sudoku-theme') === 'dark';
 applyTheme();
-
 function applyTheme() {
-  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-  themeBtn.textContent = darkMode ? '☀️' : '🌙';
-  localStorage.setItem('sudoku-theme', darkMode ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeBtn.textContent = dark ? '☀️' : '🌙';
+  localStorage.setItem('sudoku-theme', dark ? 'dark' : 'light');
 }
+themeBtn.addEventListener('click', () => { dark=!dark; applyTheme(); });
 
-themeBtn.addEventListener('click', () => { darkMode = !darkMode; applyTheme(); });
+/* ═══════════════════  DIFFICULTY  ══════════════════════════════════════════ */
 
-/* ─── Difficulty buttons ─────────────────────────────────────────────────── */
 document.querySelectorAll('.diff-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    state.difficulty = btn.dataset.diff;
-    startNewGame();
+    S.diff = btn.dataset.diff;
+    startGame();
   });
 });
 
-/* ─── New game ───────────────────────────────────────────────────────────── */
-newGameBtn.addEventListener('click', startNewGame);
+/* ═══════════════════  GAME INIT  ════════════════════════════════════════════ */
 
-function startNewGame() {
-  clearInterval(state.timerInt);
+newGameBtn.addEventListener('click', startGame);
+
+function startGame() {
+  clearInterval(S.timerInt);
   bannerEl.classList.remove('show');
 
-  const { puzzle, solution } = generatePuzzle(state.difficulty);
-  state.puzzle   = puzzle;
-  state.solution = solution;
-  state.board    = [...puzzle];
-  state.notes    = Array.from({length:81}, () => new Set());
-  state.given    = puzzle.map(v => v !== 0);
-  state.selected = -1;
-  state.notesMode= false;
-  state.errors   = 0;
-  state.hints    = 0;
-  state.history  = [];
-  state.timerSecs= 0;
-  state.complete = false;
+  const {puzzle,solution} = makePuzzle(S.diff);
+  S.puzzle   = puzzle;
+  S.solution = solution;
+  S.board    = [...puzzle];
+  S.notes    = Array.from({length:81}, ()=>new Set());
+  S.given    = puzzle.map(v=>v!==0);
+  S.sel      = -1;
+  S.notesMode= false;
+  S.errors   = 0;
+  S.hints    = MAX_HINTS;
+  S.history  = [];
+  S.timerSecs= 0;
+  S.done     = false;
+  S.gameOver = false;
 
-  notesBtn.classList.remove('active');
-  errorEl.textContent = '0';
-  hintEl.textContent  = '0';
+  notesToggle.textContent = 'OFF';
+  notesToggle.classList.remove('on');
+  diffLabelEl.textContent = DIFF_LABELS[S.diff];
+  errorEl.textContent = `0/${MAX_ERRORS}`;
+  hintStatEl.textContent = '0';
+  hintBadge.textContent  = MAX_HINTS;
+  hintBtn.style.opacity  = '1';
+  hintBtn.style.pointerEvents = '';
 
   renderBoard();
   buildNumpad();
   startTimer();
 }
 
-/* ─── Timer ──────────────────────────────────────────────────────────────── */
+/* ═══════════════════  TIMER  ════════════════════════════════════════════════ */
+
 function startTimer() {
   timerEl.textContent = '00:00';
-  state.timerInt = setInterval(() => {
-    if (state.complete) return;
-    state.timerSecs++;
-    const m = String(Math.floor(state.timerSecs/60)).padStart(2,'0');
-    const s = String(state.timerSecs%60).padStart(2,'0');
+  S.timerInt = setInterval(() => {
+    if (S.done || S.gameOver) return;
+    S.timerSecs++;
+    const m = String(S.timerSecs/60|0).padStart(2,'0');
+    const s = String(S.timerSecs%60).padStart(2,'0');
     timerEl.textContent = `${m}:${s}`;
   }, 1000);
 }
 
-/* ─── Build board ────────────────────────────────────────────────────────── */
+/* ═══════════════════  BOARD RENDER  ═════════════════════════════════════════ */
+
 function renderBoard() {
   boardEl.innerHTML = '';
-  for (let i = 0; i < 81; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.dataset.idx = i;
-    cell.dataset.row = Math.floor(i/9);
-    cell.dataset.col = i%9;
-    cell.addEventListener('click', () => selectCell(i));
-    boardEl.appendChild(cell);
+  for (let i=0;i<81;i++) {
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.dataset.idx = i;
+    el.dataset.row = i/9|0;
+    el.dataset.col = i%9;
+    el.addEventListener('click', ()=>selectCell(i));
+    boardEl.appendChild(el);
   }
-  refreshAllCells();
-}
-
-function refreshAllCells() {
-  for (let i = 0; i < 81; i++) refreshCell(i);
-  updateHighlights();
-  buildNumpad();
+  for (let i=0;i<81;i++) refreshCell(i);
+  highlight();
 }
 
 function refreshCell(i) {
-  const cell = boardEl.children[i];
-  if (!cell) return;
-  cell.className = 'cell';
-  if (state.given[i]) cell.classList.add('given');
+  const el = boardEl.children[i];
+  if (!el) return;
+  // preserve state classes, rebuild content
+  el.className = 'cell';
+  if (S.given[i]) el.classList.add('given');
 
-  const val = state.board[i];
-
-  if (val !== 0) {
-    // Check error
-    const isError = !state.given[i] && val !== state.solution[i];
-    if (isError) cell.classList.add('error');
-    if (!state.given[i] && !isError) cell.classList.add('user-filled');
-    cell.textContent = val;
-  } else if (state.notes[i].size > 0) {
-    // Render notes
-    cell.textContent = '';
+  const v = S.board[i];
+  if (v !== 0) {
+    const wrong = !S.given[i] && v !== S.solution[i];
+    if (wrong) el.classList.add('error');
+    else if (!S.given[i]) el.classList.add('user-filled');
+    el.textContent = v;
+  } else if (S.notes[i].size > 0) {
+    el.textContent = '';
     const grid = document.createElement('div');
     grid.className = 'notes-grid';
-    for (let n = 1; n <= 9; n++) {
+    for (let n=1;n<=9;n++) {
       const span = document.createElement('span');
       span.className = 'note-num';
-      span.textContent = state.notes[i].has(n) ? n : '';
+      span.textContent = S.notes[i].has(n) ? n : '';
       grid.appendChild(span);
     }
-    cell.appendChild(grid);
+    el.appendChild(grid);
   } else {
-    cell.textContent = '';
+    el.textContent = '';
   }
 }
 
-function updateHighlights() {
-  const sel = state.selected;
-  const selVal = sel >= 0 ? state.board[sel] : 0;
-  const selRow = sel >= 0 ? Math.floor(sel/9) : -1;
-  const selCol = sel >= 0 ? sel%9 : -1;
-  const selBox = sel >= 0 ? Math.floor(selRow/3)*3 + Math.floor(selCol/3) : -1;
+function highlight() {
+  const sel = S.sel;
+  const selV = sel>=0 ? S.board[sel] : 0;
+  const selR = sel>=0 ? sel/9|0 : -1;
+  const selC = sel>=0 ? sel%9 : -1;
+  const selB = sel>=0 ? (selR/3|0)*3+(selC/3|0) : -1;
 
-  for (let i = 0; i < 81; i++) {
-    const cell = boardEl.children[i];
-    if (!cell) continue;
-    cell.classList.remove('selected','highlighted','same-number');
-
-    if (i === sel) { cell.classList.add('selected'); continue; }
-
-    if (sel < 0) continue;
-
-    const row = Math.floor(i/9), col = i%9;
-    const box = Math.floor(row/3)*3 + Math.floor(col/3);
-    const related = row === selRow || col === selCol || box === selBox;
-
-    if (related) cell.classList.add('highlighted');
-    if (selVal !== 0 && state.board[i] === selVal) cell.classList.add('same-number');
+  for (let i=0;i<81;i++) {
+    const el = boardEl.children[i];
+    if (!el) continue;
+    el.classList.remove('selected','highlighted','same-number');
+    if (i===sel) { el.classList.add('selected'); continue; }
+    if (sel<0) continue;
+    const r=i/9|0, c=i%9, b=(r/3|0)*3+(c/3|0);
+    if (r===selR||c===selC||b===selB) el.classList.add('highlighted');
+    if (selV!==0 && S.board[i]===selV) el.classList.add('same-number');
   }
 }
 
-/* ─── Select cell ────────────────────────────────────────────────────────── */
+/* ═══════════════════  SELECT  ═══════════════════════════════════════════════ */
+
 function selectCell(i) {
-  state.selected = i;
-  updateHighlights();
+  S.sel = i;
+  highlight();
 }
 
-/* ─── Numpad ─────────────────────────────────────────────────────────────── */
+/* ═══════════════════  NUMPAD  ═══════════════════════════════════════════════ */
+
 function buildNumpad() {
   numpadEl.innerHTML = '';
-  // Count how many of each number are placed (correct)
   const counts = new Array(10).fill(0);
-  for (let i = 0; i < 81; i++) {
-    if (state.board[i] > 0 && state.board[i] === state.solution[i]) counts[state.board[i]]++;
-  }
+  for (let i=0;i<81;i++)
+    if (S.board[i]>0 && S.board[i]===S.solution[i]) counts[S.board[i]]++;
 
-  for (let n = 1; n <= 9; n++) {
+  for (let n=1;n<=9;n++) {
     const btn = document.createElement('button');
     btn.className = 'num-btn';
-    const remaining = 9 - counts[n];
-    btn.innerHTML = `${n}<span class="num-count">${remaining > 0 ? remaining : ''}</span>`;
-    if (remaining <= 0) btn.classList.add('complete-num');
-    btn.addEventListener('click', () => inputNumber(n));
+    if (counts[n]>=9) btn.classList.add('done');
+    btn.textContent = n;
+    btn.addEventListener('click', ()=>inputNum(n));
     numpadEl.appendChild(btn);
   }
 }
 
-/* ─── Input ──────────────────────────────────────────────────────────────── */
-function inputNumber(n) {
-  const i = state.selected;
-  if (i < 0 || state.given[i] || state.complete) return;
+/* ═══════════════════  INPUT  ════════════════════════════════════════════════ */
 
-  if (state.notesMode) {
-    // Toggle note
+function inputNum(n) {
+  const i = S.sel;
+  if (i<0 || S.given[i] || S.done || S.gameOver) return;
+
+  if (S.notesMode) {
     saveHistory(i);
-    if (state.notes[i].has(n)) state.notes[i].delete(n);
-    else                         state.notes[i].add(n);
+    S.notes[i].has(n) ? S.notes[i].delete(n) : S.notes[i].add(n);
     refreshCell(i);
     return;
   }
 
-  if (state.board[i] === n) return; // same value already
-
+  if (S.board[i]===n) return;
   saveHistory(i);
-  state.notes[i].clear();
-  state.board[i] = n;
+  S.notes[i].clear();
+  S.board[i] = n;
 
-  // Count error
-  if (n !== state.solution[i]) {
-    state.errors++;
-    errorEl.textContent = state.errors;
+  if (n !== S.solution[i]) {
+    S.errors++;
+    errorEl.textContent = `${S.errors}/${MAX_ERRORS}`;
+    if (S.errors >= MAX_ERRORS) {
+      endGame(false);
+      refreshCell(i);
+      highlight();
+      return;
+    }
   } else {
-    // Remove this number from notes in related cells
     clearRelatedNotes(i, n);
   }
 
   refreshCell(i);
-  updateHighlights();
+  highlight();
   buildNumpad();
-  checkComplete();
+  checkWin();
 }
 
 function clearRelatedNotes(idx, n) {
-  const row = Math.floor(idx/9), col = idx%9;
-  const boxR = Math.floor(row/3)*3, boxC = Math.floor(col/3)*3;
-  for (let i = 0; i < 81; i++) {
-    const r = Math.floor(i/9), c = i%9;
-    const sameRow = r === row, sameCol = c === col;
-    const sameBox = Math.floor(r/3)*3 === boxR && Math.floor(c/3)*3 === boxC;
-    if (sameRow || sameCol || sameBox) {
-      if (state.notes[i].has(n)) {
-        state.notes[i].delete(n);
-        refreshCell(i);
-      }
+  const r=idx/9|0, c=idx%9, br=(r/3|0)*3, bc=(c/3|0)*3;
+  for (let i=0;i<81;i++) {
+    const ri=i/9|0, ci=i%9;
+    if (ri===r||ci===c||(ri/3|0)*3===br&&(ci/3|0)*3===bc) {
+      if (S.notes[i].has(n)) { S.notes[i].delete(n); refreshCell(i); }
     }
   }
 }
 
-/* ─── Erase ──────────────────────────────────────────────────────────────── */
-eraseBtn.addEventListener('click', () => {
-  const i = state.selected;
-  if (i < 0 || state.given[i] || state.complete) return;
-  if (state.board[i] === 0 && state.notes[i].size === 0) return;
+/* ═══════════════════  ERASE  ════════════════════════════════════════════════ */
+
+eraseBtn.addEventListener('click', ()=>{
+  const i=S.sel;
+  if (i<0||S.given[i]||S.done||S.gameOver) return;
+  if (S.board[i]===0&&S.notes[i].size===0) return;
   saveHistory(i);
-  state.board[i] = 0;
-  state.notes[i].clear();
-  refreshCell(i);
-  updateHighlights();
-  buildNumpad();
+  S.board[i]=0; S.notes[i].clear();
+  refreshCell(i); highlight(); buildNumpad();
 });
 
-/* ─── Notes toggle ───────────────────────────────────────────────────────── */
-notesBtn.addEventListener('click', () => {
-  state.notesMode = !state.notesMode;
-  notesBtn.classList.toggle('active', state.notesMode);
+/* ═══════════════════  NOTES  ════════════════════════════════════════════════ */
+
+notesBtn.addEventListener('click', ()=>{
+  S.notesMode = !S.notesMode;
+  notesToggle.textContent = S.notesMode ? 'ON' : 'OFF';
+  notesToggle.classList.toggle('on', S.notesMode);
 });
 
-/* ─── Hint ───────────────────────────────────────────────────────────────── */
-hintBtn.addEventListener('click', () => {
-  if (state.complete) return;
-  // Pick selected cell if empty, otherwise random empty
-  let target = state.selected >= 0 && state.board[state.selected] === 0 && !state.given[state.selected]
-    ? state.selected
-    : -1;
+/* ═══════════════════  HINT  ═════════════════════════════════════════════════ */
 
-  if (target < 0) {
-    const empties = [];
-    for (let i = 0; i < 81; i++) if (state.board[i] === 0) empties.push(i);
-    if (empties.length === 0) return;
-    target = empties[Math.floor(Math.random()*empties.length)];
+hintBtn.addEventListener('click', ()=>{
+  if (S.done||S.gameOver||S.hints<=0) return;
+  let target = S.sel>=0&&S.board[S.sel]===0&&!S.given[S.sel] ? S.sel : -1;
+  if (target<0) {
+    const emp=[];
+    for (let i=0;i<81;i++) if (S.board[i]===0) emp.push(i);
+    if (!emp.length) return;
+    target = emp[Math.random()*emp.length|0];
   }
-
   saveHistory(target);
-  state.notes[target].clear();
-  state.board[target] = state.solution[target];
-  state.given[target] = true; // treat as given so it can't be erased
-  state.hints++;
-  hintEl.textContent = state.hints;
+  S.notes[target].clear();
+  S.board[target]=S.solution[target];
+  S.given[target]=true;
+  S.hints--;
+  hintStatEl.textContent = MAX_HINTS - S.hints;
+  hintBadge.textContent  = S.hints;
+  if (S.hints<=0) { hintBtn.style.opacity='.3'; hintBtn.style.pointerEvents='none'; }
 
-  clearRelatedNotes(target, state.solution[target]);
+  clearRelatedNotes(target, S.solution[target]);
   selectCell(target);
   refreshCell(target);
-  updateHighlights();
+  highlight();
   buildNumpad();
-  checkComplete();
+  checkWin();
 });
 
-/* ─── Undo ───────────────────────────────────────────────────────────────── */
+/* ═══════════════════  UNDO  ═════════════════════════════════════════════════ */
+
 function saveHistory(idx) {
-  state.history.push({
-    idx,
-    val: state.board[idx],
-    notes: new Set(state.notes[idx]),
-  });
-  if (state.history.length > 100) state.history.shift();
+  S.history.push({idx, val:S.board[idx], notes:new Set(S.notes[idx])});
+  if (S.history.length>100) S.history.shift();
 }
 
-undoBtn.addEventListener('click', () => {
-  if (state.history.length === 0 || state.complete) return;
-  const { idx, val, notes } = state.history.pop();
-  state.board[idx] = val;
-  state.notes[idx] = notes;
-  state.selected = idx;
-  refreshCell(idx);
-  updateHighlights();
-  buildNumpad();
+undoBtn.addEventListener('click', ()=>{
+  if (!S.history.length||S.done||S.gameOver) return;
+  const {idx,val,notes}=S.history.pop();
+  S.board[idx]=val; S.notes[idx]=notes;
+  S.sel=idx;
+  refreshCell(idx); highlight(); buildNumpad();
 });
 
-/* ─── Keyboard ───────────────────────────────────────────────────────────── */
-document.addEventListener('keydown', (e) => {
-  if (state.complete) return;
+/* ═══════════════════  KEYBOARD  ═════════════════════════════════════════════ */
 
-  const sel = state.selected;
-
-  // Arrow navigation
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+document.addEventListener('keydown', e=>{
+  if (S.done||S.gameOver) return;
+  const arrows = {ArrowUp:-9, ArrowDown:9, ArrowLeft:-1, ArrowRight:1};
+  if (arrows[e.key] !== undefined) {
     e.preventDefault();
-    let idx = sel < 0 ? 0 : sel;
-    if (e.key === 'ArrowUp')    idx = Math.max(0, idx-9);
-    if (e.key === 'ArrowDown')  idx = Math.min(80, idx+9);
-    if (e.key === 'ArrowLeft')  idx = Math.max(0, idx-1);
-    if (e.key === 'ArrowRight') idx = Math.min(80, idx+1);
-    selectCell(idx);
-    return;
+    const cur = S.sel<0 ? 0 : S.sel;
+    const next = Math.max(0,Math.min(80,cur+arrows[e.key]));
+    selectCell(next); return;
   }
-
-  if (e.key === 'n' || e.key === 'N') { notesBtn.click(); return; }
-  if (e.key === 'z' && (e.ctrlKey||e.metaKey)) { undoBtn.click(); return; }
-  if (e.key === 'Delete' || e.key === 'Backspace') { eraseBtn.click(); return; }
-
-  const num = parseInt(e.key);
-  if (num >= 1 && num <= 9) { inputNumber(num); return; }
+  if (e.key==='n'||e.key==='N') { notesBtn.click(); return; }
+  if ((e.ctrlKey||e.metaKey)&&e.key==='z') { undoBtn.click(); return; }
+  if (e.key==='Delete'||e.key==='Backspace') { eraseBtn.click(); return; }
+  const n=+e.key;
+  if (n>=1&&n<=9) inputNum(n);
 });
 
-/* ─── Complete check ─────────────────────────────────────────────────────── */
-function checkComplete() {
-  for (let i = 0; i < 81; i++) {
-    if (state.board[i] !== state.solution[i]) return;
-  }
-  state.complete = true;
-  clearInterval(state.timerInt);
-  bannerEl.classList.add('show');
+/* ═══════════════════  WIN / LOSE  ═══════════════════════════════════════════ */
+
+function checkWin() {
+  for (let i=0;i<81;i++) if (S.board[i]!==S.solution[i]) return;
+  endGame(true);
 }
 
-/* ─── Init ───────────────────────────────────────────────────────────────── */
-startNewGame();
+function endGame(win) {
+  if (win) {
+    S.done = true;
+    clearInterval(S.timerInt);
+    bannerEl.className = 'banner success show';
+    const m=String(S.timerSecs/60|0).padStart(2,'0');
+    const s=String(S.timerSecs%60).padStart(2,'0');
+    bannerEl.textContent = `🎉 Brawo! Ukończyłeś w ${m}:${s}!`;
+  } else {
+    S.gameOver = true;
+    clearInterval(S.timerInt);
+    bannerEl.className = 'banner gameover show';
+    bannerEl.textContent = '❌ Koniec gry — przekroczono limit błędów!';
+  }
+}
+
+/* ═══════════════════  START  ════════════════════════════════════════════════ */
+
+startGame();
 </script>
 </body>
 </html>
