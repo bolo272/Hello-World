@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#1c140e" />
+<title>Deep Dig — prototype</title>
+<style>
+  :root {
+    --soil: #6b4a2b;
+    --ui-bg: rgba(20, 14, 9, 0.92);
+    --gold: #f5c542;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #0c0805;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #f3e9dd; user-select: none; -webkit-user-select: none;
+  }
+  #game { position: fixed; inset: 0; display: flex; flex-direction: column; }
+  canvas { display: block; flex: 1 1 auto; touch-action: none; background: #1a82c4; }
+
+  /* Top HUD */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; gap: 8px; padding: 10px;
+    pointer-events: none;
+  }
+  .chip {
+    background: var(--ui-bg); border: 1px solid #3a2a1c; border-radius: 12px;
+    padding: 6px 12px; font-size: 14px; font-weight: 600; line-height: 1.2;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .chip small { display: block; font-size: 10px; opacity: .6; font-weight: 500; }
+  .chip.money { color: var(--gold); }
+  #shopBtn {
+    pointer-events: auto; margin-left: auto; cursor: pointer;
+    background: var(--gold); color: #2a1c0c; border: none;
+  }
+
+  /* Controls */
+  #pad {
+    position: absolute; bottom: 18px; right: 18px;
+    display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px);
+    gap: 8px; pointer-events: none;
+  }
+  .btn {
+    pointer-events: auto; background: var(--ui-bg);
+    border: 1px solid #4a3422; border-radius: 16px; color: #f3e9dd;
+    font-size: 26px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,.4); transition: transform .05s, background .1s;
+  }
+  .btn:active { transform: scale(.92); background: #2c2014; }
+  #bLeft  { grid-area: 2 / 1; }
+  #bDown  { grid-area: 2 / 2; }
+  #bRight { grid-area: 2 / 3; }
+  #bUp    { grid-area: 1 / 2; }
+  .hint { position:absolute; bottom: 22px; left: 18px; max-width: 45%; font-size: 12px; opacity:.7; background:var(--ui-bg); padding:8px 10px; border-radius:10px; }
+
+  /* Modal */
+  #shop {
+    position: absolute; inset: 0; background: rgba(8,5,3,.86);
+    display: none; flex-direction: column; padding: 18px; overflow-y: auto;
+  }
+  #shop.open { display: flex; }
+  #shop h2 { margin: 4px 0 2px; }
+  #shop .sub { opacity:.7; font-size: 13px; margin-bottom: 14px; }
+  .item {
+    background: #1d1409; border: 1px solid #3a2a1c; border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+  }
+  .item .ic { font-size: 28px; width: 34px; text-align:center; }
+  .item .body { flex: 1; }
+  .item .body b { font-size: 15px; }
+  .item .body p { margin: 2px 0 0; font-size: 12px; opacity:.7; }
+  .item .lvl { font-size: 11px; opacity:.6; }
+  .buy {
+    background: var(--gold); color: #2a1c0c; border: none; border-radius: 10px;
+    padding: 9px 14px; font-weight: 700; cursor: pointer; min-width: 90px; font-size: 14px;
+  }
+  .buy:disabled { background: #4a3c28; color: #8a7c66; cursor: not-allowed; }
+  #closeShop { margin-top: 6px; background:#3a2a1c; color:#f3e9dd; border:none; border-radius:12px; padding:12px; font-size:15px; cursor:pointer; }
+  .toast {
+    position: absolute; left: 50%; top: 64px; transform: translateX(-50%);
+    background: var(--ui-bg); border:1px solid #3a2a1c; padding: 8px 14px; border-radius: 12px;
+    font-size: 14px; opacity: 0; transition: opacity .25s, top .25s; pointer-events:none; white-space:nowrap;
+  }
+  .toast.show { opacity: 1; top: 74px; }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <div class="chip money"><small>CASH</small><span id="money">$0</span></div>
+    <div class="chip"><small>DEPTH</small><span id="depth">0 m</span></div>
+    <div class="chip"><small>TOOL</small><span id="tool">Spoon</span></div>
+    <button class="chip" id="shopBtn">🛒 Shop</button>
+  </div>
+
+  <div class="hint" id="hint">Dig down through the layers. Sell what you find. Buy better tools in the Shop.</div>
+
+  <div id="pad">
+    <div class="btn" id="bUp">▲</div>
+    <div class="btn" id="bLeft">◀</div>
+    <div class="btn" id="bDown">⛏</div>
+    <div class="btn" id="bRight">▶</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div id="shop">
+    <h2>🛒 Shop</h2>
+    <div class="sub">Spend your cash to dig faster, dig deeper, and earn more.</div>
+    <div id="shopItems"></div>
+    <button id="closeShop">Back to digging</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Deep Dig — a 2.5D side-view digging prototype
+   Single-file: tweak the tables below to balance the game.
+   ============================================================ */
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// ---- Materials -------------------------------------------------
+// hp   : how many "dig power" points to break the block
+// value: cash earned when broken
+// minD : minimum depth (rows) this material can appear at
+const MAT = {
+  air:     { name:'Air',     color:'#1a82c4', hp:0,    value:0,    solid:false },
+  grass:   { name:'Topsoil', color:'#5a7d3a', hp:1,    value:1,    minD:0 },
+  dirt:    { name:'Dirt',    color:'#6b4a2b', hp:2,    value:2,    minD:1 },
+  clay:    { name:'Clay',    color:'#9c6b4a', hp:5,    value:6,    minD:6 },
+  sand:    { name:'Sand',    color:'#d9c089', hp:3,    value:4,    minD:8 },
+  rock:    { name:'Rock',    color:'#7d7d82', hp:12,   value:10,   minD:14 },
+  water:   { name:'Water',   color:'#2aa7d6', hp:4,    value:8,    minD:10 },
+  coal:    { name:'Coal',    color:'#2b2b2f', hp:14,   value:30,   minD:18 },
+  iron:    { name:'Iron',    color:'#b08b6e', hp:18,   value:55,   minD:26 },
+  granite: { name:'Granite', color:'#52525a', hp:30,   value:45,   minD:34 },
+  gold:    { name:'Gold',    color:'#f5c542', hp:22,   value:140,  minD:40 },
+  emerald: { name:'Emerald', color:'#2ecf7a', hp:28,   value:260,  minD:54 },
+  diamond: { name:'Diamond', color:'#7fe9ff', hp:40,   value:600,  minD:70 },
+};
+
+// ---- World -----------------------------------------------------
+const COLS = 9;                 // shaft width in blocks
+const grid = new Map();         // "x,y" -> material key
+const broken = new Map();       // "x,y" -> remaining hp (in-progress digs)
+
+function key(x, y) { return x + ',' + y; }
+
+// Procedurally decide what material a fresh cell holds, by depth.
+function genCell(x, y) {
+  if (y < 0) return 'air';
+  if (y === 0) return 'grass';
+
+  // Ore / feature veins: cheap hash-based noise so the world is stable.
+  const r = Math.abs(Math.sin((x * 374761 + y * 668265) * 0.0001)) % 1;
+  const candidates = ['diamond','emerald','gold','iron','coal','water','granite','rock','sand','clay'];
+  for (const k of candidates) {
+    const m = MAT[k];
+    if (y >= m.minD) {
+      // rarer the deeper/more valuable, gated by depth band
+      let chance = 0.04;
+      if (k === 'water') chance = 0.05;
+      if (k === 'sand')  chance = 0.10;
+      if (k === 'clay')  chance = 0.12;
+      if (k === 'rock')  chance = 0.18;
+      if (k === 'granite') chance = 0.10;
+      if (r < chance && y >= m.minD + (m.value > 100 ? 0 : 0)) return k;
+    }
+  }
+  return 'dirt';
+}
+
+function cellAt(x, y) {
+  if (x < 0 || x >= COLS) return 'bedrock'; // shaft walls
+  const k = key(x, y);
+  if (!grid.has(k)) grid.set(k, genCell(x, y));
+  return grid.get(k);
+}
+
+// ---- Player & economy -----------------------------------------
+const player = { x: Math.floor(COLS / 2), y: 0 };
+
+const state = {
+  money: 0,
+  maxDepth: 0,
+  digLevel: 0,     // index into TOOLS
+  valueLevel: 0,   // sell multiplier upgrade
+  autoLevel: 0,    // auto-dig speed
+  tourismUnlocked: false,
+};
+
+const TOOLS = [
+  { name:'Spoon',     power:1,  cost:0 },
+  { name:'Trowel',    power:2,  cost:50 },
+  { name:'Shovel',    power:4,  cost:200 },
+  { name:'Pickaxe',   power:7,  cost:650 },
+  { name:'Jackhammer',power:12, cost:1800 },
+  { name:'Auger',     power:20, cost:5000 },
+  { name:'Mining Mech',power:34,cost:14000 },
+];
+const VALUE_UP = [
+  { mult:1.0, cost:0 },
+  { mult:1.5, cost:300 },
+  { mult:2.2, cost:1200 },
+  { mult:3.2, cost:4000 },
+  { mult:5.0, cost:12000 },
+];
+const AUTO_UP = [
+  { name:'None',      every:0,    cost:0 },     // every = ms between auto-digs (0 = off)
+  { name:'Helper',    every:1400, cost:900 },
+  { name:'Crew',      every:800,  cost:3500 },
+  { name:'Drill Rig', every:400,  cost:11000 },
+];
+
+function digPower()  { return TOOLS[state.digLevel].power; }
+function valueMult() { return VALUE_UP[state.valueLevel].mult; }
+
+// ---- Toast helper ---------------------------------------------
+let toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 1100);
+}
+
+// ---- Core actions ---------------------------------------------
+function isDiggable(x, y) {
+  const m = cellAt(x, y);
+  return m !== 'air' && m !== 'bedrock';
+}
+
+// Try to dig the cell at (x,y). Returns true if the player should move there.
+function digOrMove(x, y) {
+  if (x < 0 || x >= COLS || y < 0) return false;     // can't leave the shaft
+  const mk = cellAt(x, y);
+  if (mk === 'bedrock') return false;
+  if (mk === 'air') { player.x = x; player.y = y; return true; }
+
+  const mat = MAT[mk];
+  const k = key(x, y);
+  let hp = broken.has(k) ? broken.get(k) : mat.hp;
+  hp -= digPower();
+
+  if (hp <= 0) {
+    // Block broken: collect value, turn to air, move in.
+    broken.delete(k);
+    grid.set(k, 'air');
+    const earned = Math.round(mat.value * valueMult());
+    if (earned > 0) { state.money += earned; toast('+$' + earned + ' ' + mat.name); }
+    player.x = x; player.y = y;
+    return true;
+  } else {
+    broken.set(k, hp);
+    return false; // still digging, stay put
+  }
+}
+
+function move(dx, dy) {
+  digOrMove(player.x + dx, player.y + dy);
+  applyGravity();
+  afterMove();
+}
+
+// Player falls into empty space below (lets you climb out by digging up too).
+function applyGravity() {
+  while (cellAt(player.x, player.y + 1) === 'air') player.y++;
+}
+
+function afterMove() {
+  if (player.y > state.maxDepth) {
+    state.maxDepth = player.y;
+    checkTourism();
+  }
+}
+
+// ---- Tourism: passive income once the hole is a landmark -------
+let tourismTimer = 0;
+function checkTourism() {
+  if (!state.tourismUnlocked && state.maxDepth >= 25) {
+    state.tourismUnlocked = true;
+    toast('🎟 Tourists discovered your hole!');
+  }
+}
+function tourismIncome(dt) {
+  if (!state.tourismUnlocked) return;
+  // deeper hole = bigger attraction
+  tourismTimer += dt;
+  if (tourismTimer >= 1000) {
+    tourismTimer = 0;
+    const income = Math.floor(state.maxDepth / 5);
+    if (income > 0) state.money += income;
+  }
+}
+
+// ---- Auto-dig -------------------------------------------------
+let autoTimer = 0;
+function autoDig(dt) {
+  const cfg = AUTO_UP[state.autoLevel];
+  if (!cfg.every) return;
+  autoTimer += dt;
+  if (autoTimer >= cfg.every) {
+    autoTimer = 0;
+    move(0, 1); // auto-digger always drills straight down
+  }
+}
+
+// ---- Rendering ------------------------------------------------
+let cell = 40;            // px size of a block (recomputed on resize)
+let camY = 0;            // world row at top of screen (float, smoothed)
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width  = cv.clientWidth  * dpr;
+  cv.height = cv.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cell = Math.floor(cv.clientWidth / COLS);
+}
+window.addEventListener('resize', resize);
+
+function draw() {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  const rowsOnScreen = H / cell;
+
+  // Smoothly follow the player, keeping them ~40% down the screen.
+  const targetCam = player.y - rowsOnScreen * 0.4;
+  camY += (targetCam - camY) * 0.15;
+
+  // Sky / underground background
+  ctx.fillStyle = '#1a82c4';
+  ctx.fillRect(0, 0, W, H);
+
+  const shaftX = 0;
+  const shaftW = COLS * cell;
+
+  const firstRow = Math.floor(camY) - 1;
+  const lastRow  = Math.ceil(camY + rowsOnScreen) + 1;
+
+  for (let y = firstRow; y <= lastRow; y++) {
+    const sy = (y - camY) * cell;
+    for (let x = 0; x < COLS; x++) {
+      const sx = shaftX + x * cell;
+      const mk = cellAt(x, y);
+      if (mk === 'air') continue;
+      const mat = MAT[mk] || { color:'#333' };
+
+      // base block
+      ctx.fillStyle = mat.color;
+      ctx.fillRect(sx, sy, cell + 1, cell + 1);
+
+      // subtle top highlight + depth shading for the 2.5D look
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      ctx.fillRect(sx, sy, cell, Math.max(2, cell * 0.12));
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(sx, sy + cell * 0.78, cell, cell * 0.22);
+
+      // in-progress crack overlay
+      const k = key(x, y);
+      if (broken.has(k)) {
+        const frac = 1 - broken.get(k) / mat.hp;
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.15 + frac * 0.45) + ')';
+        ctx.fillRect(sx, sy, cell, cell);
+      }
+    }
+  }
+
+  // depth markers every 10m on the left wall
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '11px sans-serif';
+  for (let y = Math.max(0, firstRow); y <= lastRow; y++) {
+    if (y % 10 === 0 && y > 0) {
+      const sy = (y - camY) * cell;
+      ctx.fillText(y + 'm', 4, sy + 12);
+    }
+  }
+
+  // Player (little digger)
+  const px = shaftX + player.x * cell;
+  const py = (player.y - camY) * cell;
+  ctx.fillStyle = '#2a1c0c';
+  ctx.fillRect(px + cell*0.18, py + cell*0.18, cell*0.64, cell*0.64);
+  ctx.fillStyle = '#f5c542';
+  ctx.fillRect(px + cell*0.30, py + cell*0.10, cell*0.40, cell*0.22); // hard hat
+  ctx.fillStyle = '#ffd9a8';
+  ctx.fillRect(px + cell*0.34, py + cell*0.34, cell*0.32, cell*0.30); // face
+
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// ---- Main loop ------------------------------------------------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(50, now - last); last = now;
+  autoDig(dt);
+  tourismIncome(dt);
+  draw();
+}
+
+// ---- HUD & Shop ----------------------------------------------
+function fmt(n) { return '$' + n.toLocaleString('en-US'); }
+
+function updateHUD() {
+  document.getElementById('money').textContent = fmt(state.money);
+  document.getElementById('depth').textContent = state.maxDepth + ' m';
+  document.getElementById('tool').textContent  = TOOLS[state.digLevel].name;
+}
+
+function shopData() {
+  const items = [];
+  // Tool
+  const nextTool = TOOLS[state.digLevel + 1];
+  items.push({
+    ic:'⛏', title: nextTool ? 'Upgrade Tool → ' + nextTool.name : 'Tool maxed',
+    desc: nextTool ? ('Dig power ' + digPower() + ' → ' + nextTool.power) : 'You have the best gear.',
+    lvl: 'Now: ' + TOOLS[state.digLevel].name,
+    cost: nextTool ? nextTool.cost : null,
+    buy: () => { state.digLevel++; }
+  });
+  // Value
+  const nextVal = VALUE_UP[state.valueLevel + 1];
+  items.push({
+    ic:'💰', title: nextVal ? 'Better Refinery' : 'Refinery maxed',
+    desc: nextVal ? ('Sell value ×' + valueMult() + ' → ×' + nextVal.mult) : 'Max sell value.',
+    lvl: 'Now: ×' + valueMult(),
+    cost: nextVal ? nextVal.cost : null,
+    buy: () => { state.valueLevel++; }
+  });
+  // Auto-dig
+  const nextAuto = AUTO_UP[state.autoLevel + 1];
+  items.push({
+    ic:'🤖', title: nextAuto ? 'Hire ' + nextAuto.name : 'Auto-dig maxed',
+    desc: nextAuto ? 'Automatically digs straight down.' : 'Fastest crew hired.',
+    lvl: 'Now: ' + AUTO_UP[state.autoLevel].name,
+    cost: nextAuto ? nextAuto.cost : null,
+    buy: () => { state.autoLevel++; }
+  });
+  return items;
+}
+
+function renderShop() {
+  const box = document.getElementById('shopItems');
+  box.innerHTML = '';
+  shopData().forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'item';
+    const canBuy = it.cost != null && state.money >= it.cost;
+    row.innerHTML =
+      '<div class="ic">' + it.ic + '</div>' +
+      '<div class="body"><b>' + it.title + '</b><p>' + it.desc + '</p>' +
+      '<span class="lvl">' + it.lvl + '</span></div>';
+    const btn = document.createElement('button');
+    btn.className = 'buy';
+    if (it.cost == null) { btn.textContent = 'MAX'; btn.disabled = true; }
+    else { btn.textContent = fmt(it.cost); btn.disabled = !canBuy; }
+    btn.onclick = () => {
+      if (it.cost != null && state.money >= it.cost) {
+        state.money -= it.cost; it.buy(); renderShop(); save();
+        toast('Purchased!');
+      }
+    };
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+
+const shopEl = document.getElementById('shop');
+document.getElementById('shopBtn').onclick = () => { renderShop(); shopEl.classList.add('open'); };
+document.getElementById('closeShop').onclick = () => shopEl.classList.remove('open');
+
+// ---- Input ---------------------------------------------------
+function bind(id, dx, dy) {
+  const el = document.getElementById(id);
+  const act = (e) => { e.preventDefault(); move(dx, dy); save(); };
+  el.addEventListener('touchstart', act, { passive:false });
+  el.addEventListener('mousedown', act);
+}
+bind('bDown', 0, 1);
+bind('bLeft', -1, 0);
+bind('bRight', 1, 0);
+bind('bUp', 0, -1);
+
+// Keyboard for desktop testing
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 's') move(0, 1);
+  else if (e.key === 'ArrowLeft' || e.key === 'a') move(-1, 0);
+  else if (e.key === 'ArrowRight'|| e.key === 'd') move(1, 0);
+  else if (e.key === 'ArrowUp' || e.key === 'w') move(0, -1);
+});
+
+// Tap a block on the canvas to dig toward it (if adjacent).
+cv.addEventListener('pointerdown', (e) => {
+  const rect = cv.getBoundingClientRect();
+  const cx = Math.floor((e.clientX - rect.left) / cell);
+  const cy = Math.floor((e.clientY - rect.top) / cell + camY);
+  const dx = cx - player.x, dy = cy - player.y;
+  if (Math.abs(dx) + Math.abs(dy) === 1) { move(dx, dy); save(); }
+});
+
+// ---- Save / load ---------------------------------------------
+function save() {
+  try {
+    localStorage.setItem('deepdig', JSON.stringify({
+      state, player, grid: [...grid], broken: [...broken]
+    }));
+  } catch (_) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem('deepdig');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    Object.assign(state, d.state);
+    Object.assign(player, d.player);
+    if (d.grid)   d.grid.forEach(([k, v]) => grid.set(k, v));
+    if (d.broken) d.broken.forEach(([k, v]) => broken.set(k, v));
+  } catch (_) {}
+}
+
+// ---- Boot ----------------------------------------------------
+load();
+resize();
+applyGravity();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
