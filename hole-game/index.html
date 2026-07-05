@@ -116,6 +116,8 @@ let camY = 0, camTarget = 0, followCam = true;
 let braceMode = false;
 let shake = 0;
 const particles = [];
+const fallers = [];   // collapsing wall blocks in flight (physics-animated)
+const ghosts = [];    // crumble-away ghosts of freshly broken tiles
 const seen = {};             // one-time tutorial messages
 let lastMilestone = 0;
 
@@ -236,12 +238,14 @@ function dig(c, r) {
   }
   if (m.val > 0 && bag.length >= bagCap) { say('🎒 Bag full — SELL your haul first!', 1800); blip(140, 0.1, 'sawtooth', 0.07); return; }
   x.dmg += tool.power;
+  x.hitUntil = performance.now() + 90;   // brief jolt so hits feel physical
   blip(160 + Math.random() * 60 + m.hp * 8, 0.06, 'square', 0.05);
   burst(p.x, p.y - camY, m.col, 5, 90);
   if (x.dmg >= m.hp) breakTile(c, r, x, m, p);
 }
 
 function breakTile(c, r, x, m, p) {
+  ghosts.push({ px: EDGE + c * T, y: SURFACE + r * T, col: m.col, life: 0.16, max: 0.16 });
   if (x.t === 'pocket') {
     rows[r][c] = AIR();
     flood(3 + Math.floor(Math.random() * 4));
@@ -286,7 +290,8 @@ function flood(vol) {
     if (rows[r][c].t === 'air') airs.push([c, r]);
   airs.sort((a, b) => b[1] - a[1]);
   for (let i = 0; i < Math.min(vol, airs.length); i++) {
-    const [c, r] = airs[i]; rows[r][c] = { t:'water', seed:Math.random() };
+    const [c, r] = airs[i];
+    rows[r][c] = { t:'water', seed:Math.random(), born: performance.now() };
   }
 }
 
@@ -304,15 +309,20 @@ function brace(c, r) {
 
 function collapse(c, r) {
   const x = rows[r][c], m = MAT[x.t];
-  // the tile crumbles into an adjacent open cell as rubble
+  // the tile physically topples into an adjacent open cell and falls until it
+  // lands, where it settles as rubble (see faller physics in update())
   const targets = [];
-  if (isOpen(c, r+1)) targets.push([c, r+1]);
-  if (isOpen(c-1, r)) targets.push([c-1, r]);
-  if (isOpen(c+1, r)) targets.push([c+1, r]);
+  if (isOpen(c, r+1)) targets.push(c);
+  if (isOpen(c-1, r)) targets.push(c-1);
+  if (isOpen(c+1, r)) targets.push(c+1);
   rows[r][c] = AIR();
   if (targets.length) {
-    const [tc, tr] = targets[Math.floor(Math.random() * targets.length)];
-    rows[tr][tc] = newCell('rubble');
+    const tc = targets[Math.floor(Math.random() * targets.length)];
+    fallers.push({
+      col: tc, sx: EDGE + c * T, x: EDGE + c * T, tx: EDGE + tc * T,
+      y: SURFACE + r * T, vy: 0, pt: 0, phase: tc === c ? 1 : 0,
+      rot: 0, vr: tc === c ? (Math.random() - 0.5) * 2 : (tc < c ? -2.5 : 2.5), t: x.t,
+    });
   }
   const p = tileCenter(c, r);
   burst(p.x, p.y - camY, m.col, 20, 180);
@@ -356,18 +366,57 @@ function update(dt) {
       } else if (x.inst > 0) x.inst = Math.max(0, x.inst - dt * 0.05);
     }
   }
-  // --- water gravity ---
+  // --- falling debris from cave-ins ---
+  for (let i = fallers.length - 1; i >= 0; i--) {
+    const f = fallers[i];
+    if (f.phase === 0) {                      // topple sideways over the lip
+      f.pt += dt / 0.16;
+      const k = Math.min(1, f.pt), e = k * k * (3 - 2 * k);
+      f.x = f.sx + (f.tx - f.sx) * e;
+      if (k >= 1) { f.phase = 1; f.x = f.tx; }
+    }
+    f.vy += 950 * dt; f.y += f.vy * dt; f.rot += f.vr * dt;
+    const rBelow = Math.floor((f.y + T + 1 - SURFACE) / T);
+    if (f.phase === 1 && rBelow >= 0 && isSolid(f.col, rBelow)) {
+      let land = rBelow - 1;
+      while (land > 0 && isSolid(f.col, land)) land--;   // stack on earlier debris
+      if (land >= 0 && !isSolid(f.col, land)) rows[land][f.col] = newCell('rubble');
+      const p = tileCenter(f.col, Math.max(0, land));
+      burst(p.x, p.y - camY, MAT.rubble.col, 12, 130);
+      shake = Math.max(shake, 5); blip(70, 0.12, 'triangle', 0.12);
+      fallers.splice(i, 1);
+    } else if (f.y > SURFACE + rows.length * T) fallers.splice(i, 1);
+  }
+  // --- crumble ghosts ---
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    ghosts[i].life -= dt;
+    if (ghosts[i].life <= 0) ghosts.splice(i, 1);
+  }
+  // --- water gravity (cells move per tick; draw offsets ease back for fluid motion) ---
   waterTimer += dt;
   if (waterTimer > 0.14) {
     waterTimer = 0;
     for (let r = rows.length - 2; r >= 0; r--) for (let c = 0; c < W; c++) {
       if (rows[r][c].t !== 'water') continue;
-      if (rows[r+1] && rows[r+1][c].t === 'air') { rows[r+1][c] = rows[r][c]; rows[r][c] = AIR(); }
-      else {
+      if (rows[r+1] && rows[r+1][c].t === 'air') {
+        const w = rows[r][c]; rows[r+1][c] = w; rows[r][c] = AIR();
+        w.oy = (w.oy || 0) - T;
+      } else {
         const dir = Math.random() < 0.5 ? -1 : 1;
-        if (cell(c+dir, r) && rows[r][c+dir].t === 'air') { rows[r][c+dir] = rows[r][c]; rows[r][c] = AIR(); }
+        if (cell(c+dir, r) && rows[r][c+dir].t === 'air') {
+          const w = rows[r][c]; rows[r][c+dir] = w; rows[r][c] = AIR();
+          w.ox = (w.ox || 0) - dir * T;
+        }
       }
     }
+  }
+  // ease water draw offsets back to rest just in time for the next sim tick
+  const wRate = (T / 0.12) * dt;
+  for (let r = 0; r < nRows; r++) for (let c = 0; c < W; c++) {
+    const w = rows[r][c];
+    if (w.t !== 'water') continue;
+    if (w.oy) w.oy = Math.abs(w.oy) <= wRate ? 0 : w.oy - Math.sign(w.oy) * wRate;
+    if (w.ox) w.ox = Math.abs(w.ox) <= wRate ? 0 : w.ox - Math.sign(w.ox) * wRate;
   }
   // --- pump ---
   if (pumpLvl > 0) {
@@ -376,7 +425,11 @@ function update(dt) {
     if (pumpTimer > interval) {
       pumpTimer = 0;
       outer: for (let r = 0; r < rows.length; r++) for (let c = 0; c < W; c++)
-        if (rows[r][c].t === 'water') { rows[r][c] = AIR(); blip(500, 0.05, 'sine', 0.03); break outer; }
+        if (rows[r][c].t === 'water') {
+          rows[r][c] = AIR(); blip(500, 0.05, 'sine', 0.03);
+          const p = tileCenter(c, r); burst(p.x, p.y - camY, '#6fb3e8', 6, 70);
+          break outer;
+        }
     }
   }
   // --- tourist income ---
@@ -461,27 +514,21 @@ function draw(time) {
   ctx.fillRect(0, edgeTop, EDGE, H + camY - edgeTop);
   ctx.fillRect(VIEW_W - EDGE, edgeTop, EDGE, H + camY - edgeTop);
 
+  const waters = [];   // drawn in a second pass so eased offsets overlap cleanly
   for (let r = r0; r <= r1; r++) {
     if (r < 0 || !rows[r]) continue;
     const y = SURFACE + r * T;
     for (let c = 0; c < W; c++) {
-      const x = rows[r][c], px = EDGE + c * T;
-      if (x.t === 'air') {
+      const x = rows[r][c];
+      let px = EDGE + c * T;
+      if (x.t === 'air' || x.t === 'water') {
         const g = ctx.createLinearGradient(0, y, 0, y + T);
         g.addColorStop(0, '#171422'); g.addColorStop(1, '#0e0c16');
         ctx.fillStyle = g; ctx.fillRect(px, y, T, T);
+        if (x.t === 'water') waters.push({ w: x, px, y, top: !isWater(c, r - 1) });
         continue;
       }
-      if (x.t === 'water') {
-        ctx.fillStyle = '#0e0c16'; ctx.fillRect(px, y, T, T);
-        ctx.fillStyle = 'rgba(52,120,190,0.8)'; ctx.fillRect(px, y, T, T);
-        if (!isWater(c, r-1)) {  // surface wave
-          ctx.fillStyle = 'rgba(160,210,255,0.7)';
-          const w = Math.sin(time / 300 + c) * 2;
-          ctx.fillRect(px, y + w + 2, T, 3);
-        }
-        continue;
-      }
+      if (x.hitUntil && time < x.hitUntil) px += (Math.random() - 0.5) * 3;
       if (!revealed(c, r)) {
         // unknown earth — keep the mystery
         const g = ctx.createLinearGradient(0, y, 0, y + T);
@@ -569,6 +616,41 @@ function draw(time) {
       ctx.fillText(r + ' m', 4, y + 14);
     }
   }
+
+  // water, drawn with eased offsets (smooth flow between sim ticks)
+  for (const q of waters) {
+    const w = q.w, wx = q.px + (w.ox || 0), wy = q.y + (w.oy || 0);
+    const a = w.born ? Math.min(0.8, 0.15 + (time - w.born) / 350) : 0.8;
+    ctx.fillStyle = `rgba(52,120,190,${a})`;
+    ctx.fillRect(wx, wy, T, T);
+    if (q.top) {
+      ctx.fillStyle = `rgba(160,210,255,${a * 0.85})`;
+      ctx.fillRect(wx, wy + Math.sin(time / 300 + q.px) * 2 + 2, T, 3);
+    }
+  }
+
+  // tumbling cave-in debris
+  for (const f of fallers) {
+    const m = MAT[f.t];
+    ctx.save();
+    ctx.translate(f.x + T / 2, f.y + T / 2);
+    ctx.rotate(f.rot);
+    ctx.fillStyle = m.col;
+    ctx.fillRect(-T / 2 + 3, -T / 2 + 3, T - 6, T - 6);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(-T / 2 + 3, T / 2 - 14, T - 6, 11);
+    ctx.restore();
+    if (Math.random() < 0.4) burst(f.x + T / 2, f.y + T / 2 - camY, m.col, 1, 50);
+  }
+
+  // crumble ghosts of broken tiles
+  for (const g2 of ghosts) {
+    const k = g2.life / g2.max, s = T * (0.3 + 0.7 * k);
+    ctx.globalAlpha = k * 0.9;
+    ctx.fillStyle = g2.col;
+    ctx.fillRect(g2.px + (T - s) / 2, g2.y + (T - s) / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
 
   // particles (already in screen-space-ish: stored minus camY at spawn — draw in world space)
   ctx.restore();

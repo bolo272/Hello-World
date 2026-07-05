@@ -134,8 +134,9 @@ cd hole-game && python3 -m http.server 8000   # or just open index.html
 
 Implemented: tap-to-dig, drag-to-scroll, 10 materials, tool tiers with
 hard-rock gating, bag/sell economy, wall instability with warning cracks,
-cascading collapses and rubble, braces, water pockets + flooding + pump,
-tourists with passive income, depth milestones, 2.5D block rendering,
+cascading collapses with physically tumbling debris that lands as rubble,
+braces, water pockets + flooding with fluid water motion + pump, tourists
+with passive income, depth milestones, fog of war, 2.5D block rendering,
 particles, screen shake, and synthesized sound effects.
 
 Not yet: saving, meta-buildings, artifacts/events, balancing beyond
