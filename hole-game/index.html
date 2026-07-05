@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>THE HOLE — dig deep</title>
+<link rel="icon" href="data:,">
+</head>
+<body>
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#101018;
+               font-family:-apple-system, "Segoe UI", Roboto, sans-serif;
+               -webkit-user-select:none; user-select:none; }
+  #wrap { position:fixed; inset:0; }
+  #game { position:absolute; inset:0; width:100%; height:100%; touch-action:none; display:block; }
+  .hud { position:absolute; left:0; right:0; display:flex; justify-content:space-between;
+         padding:calc(env(safe-area-inset-top, 0px) + 8px) 12px 0; pointer-events:none; color:#fff;
+         text-shadow:0 1px 3px rgba(0,0,0,.6); font-weight:700; }
+  .hud .pill { background:rgba(10,12,24,.55); border-radius:20px; padding:6px 14px; font-size:15px;
+               backdrop-filter:blur(4px); }
+  #depthPill span { color:#ffd23f; }
+  #moneyPill { color:#8fe388; }
+  #msg { position:absolute; top:22%; left:0; right:0; text-align:center; pointer-events:none; }
+  #msg div { display:inline-block; background:rgba(10,12,24,.75); color:#ffd23f; padding:10px 18px;
+             border-radius:12px; font-size:16px; font-weight:700; max-width:80%;
+             text-shadow:0 1px 2px #000; transition:opacity .4s; }
+  #bar { position:absolute; left:0; right:0; bottom:0; display:flex; gap:8px; align-items:stretch;
+         padding:10px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); }
+  #bar button { flex:1; border:0; border-radius:14px; padding:13px 6px; font-size:15px; font-weight:800;
+                color:#fff; background:#2b2f45; box-shadow:0 3px 0 rgba(0,0,0,.4); cursor:pointer;
+                touch-action:manipulation; }
+  #bar button:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.4); }
+  #sellBtn { background:#2e7d32; }
+  #braceBtn.on { background:#b3701a; outline:3px solid #ffd23f; }
+  #shopBtn { background:#4a4090; }
+  #bar button small { display:block; font-weight:600; opacity:.85; font-size:11px; margin-top:2px; }
+  #shop { position:absolute; inset:0; background:rgba(6,8,16,.82); display:none; z-index:5;
+          overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  #shop.open { display:block; }
+  #shopInner { max-width:420px; margin:8vh auto 4vh; background:#1c2033; border-radius:18px;
+               padding:18px; color:#fff; }
+  #shopInner h2 { margin:0 0 4px; color:#ffd23f; }
+  #shopInner p.sub { margin:0 0 14px; opacity:.7; font-size:13px; }
+  .item { display:flex; align-items:center; gap:12px; background:#262b42; border-radius:12px;
+          padding:12px; margin-bottom:10px; }
+  .item .ic { font-size:28px; width:38px; text-align:center; }
+  .item .tx { flex:1; }
+  .item .tx b { display:block; font-size:15px; }
+  .item .tx span { font-size:12px; opacity:.75; }
+  .item button { border:0; border-radius:10px; padding:10px 14px; font-weight:800; font-size:14px;
+                 color:#fff; background:#2e7d32; cursor:pointer; white-space:nowrap; }
+  .item button:disabled { background:#3a3f58; opacity:.6; }
+  #closeShop { width:100%; border:0; border-radius:12px; padding:12px; margin-top:6px; font-size:15px;
+               font-weight:800; background:#2b2f45; color:#fff; cursor:pointer; }
+</style>
+
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div class="hud" id="hudTop">
+    <div class="pill" id="depthPill">⛏ depth <span id="depthTxt">0 m</span></div>
+    <div class="pill" id="moneyPill">$<span id="moneyTxt">0</span></div>
+  </div>
+  <div id="msg"></div>
+  <div id="bar">
+    <button id="braceBtn">🪵 BRACE<small>$20 / wall</small></button>
+    <button id="sellBtn">💰 SELL<small id="sellSub">bag 0/10 · $0</small></button>
+    <button id="shopBtn">🛒 SHOP<small>upgrades</small></button>
+  </div>
+  <div id="shop"><div id="shopInner">
+    <h2>🛒 Surface shop</h2><p class="sub">Sell dirt. Buy power. Dig deeper.</p>
+    <div id="shopItems"></div>
+    <button id="closeShop">Back to the hole</button>
+  </div></div>
+</div>
+
+<script>
+'use strict';
+// ============================== CONFIG =====================================
+const W = 9;                 // hole width in tiles
+const T = 64;                // tile size (logical px)
+const EDGE = 32;             // bedrock border width
+const VIEW_W = W * T + EDGE * 2;
+const SURFACE = 170;         // logical px of sky above row 0
+const BRACE_COST = 20;
+
+const MAT = {
+  grass:  { name:'Topsoil',     hp:2,  val:1,   tier:0, col:'#7a5230', crumble:0.010 },
+  dirt:   { name:'Dirt',        hp:3,  val:1,   tier:0, col:'#8a5a33', crumble:0.012 },
+  clay:   { name:'Clay',        hp:6,  val:4,   tier:0, col:'#bf7b45', crumble:0.004 },
+  gravel: { name:'Gravel',      hp:4,  val:2,   tier:0, col:'#8d8578', crumble:0.050 },
+  rock:   { name:'Rock',        hp:10, val:8,   tier:2, col:'#6e6e78', crumble:0 },
+  coal:   { name:'Coal',        hp:8,  val:12,  tier:1, col:'#33333a', crumble:0.003 },
+  iron:   { name:'Iron ore',    hp:12, val:20,  tier:2, col:'#96604a', crumble:0 },
+  gold:   { name:'Gold ore',    hp:14, val:60,  tier:3, col:'#c9a227', crumble:0 },
+  gem:    { name:'Gemstone',    hp:16, val:150, tier:3, col:'#3fb8af', crumble:0 },
+  granite:{ name:'Granite',     hp:24, val:40,  tier:4, col:'#5c5470', crumble:0 },
+  pocket: { name:'Water pocket',hp:1,  val:0,   tier:0, col:'#3a6ea5', crumble:0 },
+  rubble: { name:'Rubble',      hp:3,  val:1,   tier:0, col:'#6f675e', crumble:0.020 },
+};
+
+const TOOLS = [
+  { name:'Rusty Trowel', ic:'🥄', power:1,  tier:0, cost:0,    note:'It came with the garden.' },
+  { name:'Shovel',       ic:'⛏', power:2,  tier:1, cost:40,   note:'Soft ground + coal, twice as fast.' },
+  { name:'Pickaxe',      ic:'⚒️', power:4,  tier:2, cost:200,  note:'Breaks ROCK and iron.' },
+  { name:'Jackhammer',   ic:'🔨', power:9,  tier:3, cost:900,  note:'Gold, gems — everything but granite.' },
+  { name:'Plasma Drill', ic:'🔥', power:20, tier:4, cost:3500, note:'Melts GRANITE. Melts everything.' },
+];
+
+// ============================== STATE ======================================
+const rows = [];             // rows[r][c] = cell
+let money = 0, bag = [], bagCap = 10, bagLvl = 0;
+let toolIdx = 0, pumpLvl = 0;
+let record = 0;              // deepest dug row + 1  (1 row = 1 m)
+let camY = 0, camTarget = 0, followCam = true;
+let braceMode = false;
+let shake = 0;
+const particles = [];
+const seen = {};             // one-time tutorial messages
+let lastMilestone = 0;
+
+function newCell(t) { const m = MAT[t]; return { t, dmg:0, inst:0, braced:false, seed:Math.random() }; }
+const AIR = () => ({ t:'air' });
+
+function genRow(r) {
+  const row = [];
+  for (let c = 0; c < W; c++) {
+    let t = 'dirt';
+    if (r === 0) t = 'grass';
+    else {
+      const roll = Math.random() * 100;
+      const clay   = r > 3  ? Math.min(20, 5 + r * 0.5) : 0;
+      const gravel = r > 4  ? Math.min(18, 8 + r * 0.3) : 0;
+      const rock   = r > 6  ? Math.min(24, (r - 6) * 1.5) : 0;
+      const coal   = r > 6  ? 5 : 0;
+      const iron   = r > 12 ? 4 : 0;
+      const pocket = r > 8  ? 4 : 0;
+      const gold   = r > 20 ? 2.5 : 0;
+      const gem    = r > 30 ? 1.5 : 0;
+      const granite= r > 25 ? Math.min(12, (r - 25) * 0.8) : 0;
+      let x = roll;
+      if      ((x -= clay)   < 0) t = 'clay';
+      else if ((x -= gravel) < 0) t = 'gravel';
+      else if ((x -= rock)   < 0) t = 'rock';
+      else if ((x -= coal)   < 0) t = 'coal';
+      else if ((x -= iron)   < 0) t = 'iron';
+      else if ((x -= pocket) < 0) t = 'pocket';
+      else if ((x -= gold)   < 0) t = 'gold';
+      else if ((x -= gem)    < 0) t = 'gem';
+      else if ((x -= granite)< 0) t = 'granite';
+    }
+    row.push(newCell(t));
+  }
+  return row;
+}
+function ensureRows(r) { while (rows.length <= r + 2) rows.push(genRow(rows.length)); }
+ensureRows(12);
+
+function cell(c, r) {
+  if (c < 0 || c >= W || r < 0) return null;      // bedrock / sky
+  ensureRows(r);
+  return rows[r][c];
+}
+const isAir   = (c, r) => { const x = cell(c, r); return !!x && x.t === 'air'; };
+const isWater = (c, r) => { const x = cell(c, r); return !!x && x.t === 'water'; };
+const isSolid = (c, r) => { const x = cell(c, r); return !!x && x.t !== 'air' && x.t !== 'water'; };
+const isOpen  = (c, r) => isAir(c, r) || isWater(c, r);
+function diggable(c, r) {
+  if (!isSolid(c, r)) return false;
+  return r === 0 || isOpen(c-1, r) || isOpen(c+1, r) || isOpen(c, r-1) || isOpen(c, r+1);
+}
+// fog of war: a tile's true material only shows when the hole gets close,
+// so water pockets and ores stay a (one-tile-telegraphed) surprise
+function revealed(c, r) {
+  if (r <= 0) return true;
+  for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++)
+    if ((dc || dr) && isOpen(c + dc, r + dr)) return true;
+  return false;
+}
+
+// ============================== SOUND ======================================
+let AC = null;
+function audio() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} return AC; }
+function blip(freq, dur, type, vol) {
+  const ac = audio(); if (!ac) return;
+  try {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.08, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+  } catch (e) {}
+}
+function rumble() {
+  const ac = audio(); if (!ac) return;
+  try {
+    const n = ac.sampleRate * 0.4, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 300; s.buffer = buf;
+    g.gain.value = 0.25; s.connect(f); f.connect(g); g.connect(ac.destination); s.start();
+  } catch (e) {}
+}
+
+// ============================== MESSAGES ===================================
+const msgEl = document.getElementById('msg');
+function say(text, ms) {
+  const d = document.createElement('div');
+  d.textContent = text; msgEl.replaceChildren(d);
+  setTimeout(() => { d.style.opacity = 0; }, (ms || 2600) - 400);
+  setTimeout(() => { if (d.parentNode) d.remove(); }, ms || 2600);
+}
+function sayOnce(key, text, ms) { if (!seen[key]) { seen[key] = true; say(text, ms || 3600); } }
+
+// ============================== PARTICLES ==================================
+function burst(x, y, col, n, spd) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = (0.4 + Math.random()) * (spd || 130);
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60,
+                     life: 0.5 + Math.random() * 0.4, col, sz: 3 + Math.random() * 4 });
+  }
+}
+
+// ============================== ACTIONS ====================================
+function tileCenter(c, r) { return { x: EDGE + c * T + T / 2, y: SURFACE + r * T + T / 2 }; }
+
+function dig(c, r) {
+  const x = cell(c, r);
+  if (!x || !diggable(c, r)) return;
+  const m = MAT[x.t], tool = TOOLS[toolIdx], p = tileCenter(c, r);
+  if (m.tier > tool.tier) {
+    blip(90, 0.12, 'square', 0.1); shake = Math.max(shake, 3);
+    burst(p.x, p.y - camY, '#ccc', 4, 60);
+    sayOnce('hard_' + x.t, `⛔ ${m.name}! Your ${tool.name} just bounces off. You need a better tool.`);
+    return;
+  }
+  if (m.val > 0 && bag.length >= bagCap) { say('🎒 Bag full — SELL your haul first!', 1800); blip(140, 0.1, 'sawtooth', 0.07); return; }
+  x.dmg += tool.power;
+  blip(160 + Math.random() * 60 + m.hp * 8, 0.06, 'square', 0.05);
+  burst(p.x, p.y - camY, m.col, 5, 90);
+  if (x.dmg >= m.hp) breakTile(c, r, x, m, p);
+}
+
+function breakTile(c, r, x, m, p) {
+  if (x.t === 'pocket') {
+    rows[r][c] = AIR();
+    flood(3 + Math.floor(Math.random() * 4));
+    sayOnce('water', '💧 You hit a WATER POCKET! The hole is flooding — you need a pump.', 4200);
+    blip(300, 0.4, 'sine', 0.12); shake = Math.max(shake, 6);
+  } else {
+    if (m.val > 0) bag.push(x.t);
+    rows[r][c] = AIR();
+    burst(p.x, p.y - camY, m.col, 14, 150);
+    blip(90 + m.hp * 6, 0.14, 'triangle', 0.1);
+    if (m.val >= 20) { say(`✨ ${m.name}! Worth $${m.val}.`, 2000); blip(660, 0.25, 'sine', 0.1); }
+    if (x.t === 'clay')   sayOnce('clay', '🧱 Clay — slow to dig, but its walls barely crumble.');
+    if (x.t === 'gravel') sayOnce('gravel', '⚠️ Gravel digs easily… and collapses easily. Watch those walls.');
+  }
+  if (r + 1 > record) {
+    record = r + 1;
+    checkMilestones();
+  }
+  // destabilise the tiles we just exposed
+  for (const [dc, dr] of [[-1,0],[1,0],[0,-1]]) {
+    const n = cell(c + dc, r + dr);
+    if (n && n.t !== 'air' && n.t !== 'water') n.inst += 0.05;
+  }
+  if (followCam) camTarget = clampCam(SURFACE + r * T - viewH() * 0.45);
+}
+
+function checkMilestones() {
+  const steps = [10, 25, 50, 75, 100, 150, 200];
+  for (const s of steps) if (record >= s && lastMilestone < s) {
+    lastMilestone = s;
+    if (s === 10) say('🎉 10 m! Word is spreading — TOURISTS are gathering at your hole. They pay to watch!', 4500);
+    else say(`🎉 ${s} m deep! The crowd goes wild. Tourist income up!`, 3200);
+    blip(523, 0.15, 'sine', 0.1); setTimeout(() => blip(659, 0.15, 'sine', 0.1), 130);
+    setTimeout(() => blip(784, 0.25, 'sine', 0.1), 260);
+  }
+}
+
+function flood(vol) {
+  // fill the deepest open-air cells with water
+  const airs = [];
+  for (let r = 0; r < rows.length; r++) for (let c = 0; c < W; c++)
+    if (rows[r][c].t === 'air') airs.push([c, r]);
+  airs.sort((a, b) => b[1] - a[1]);
+  for (let i = 0; i < Math.min(vol, airs.length); i++) {
+    const [c, r] = airs[i]; rows[r][c] = { t:'water', seed:Math.random() };
+  }
+}
+
+function brace(c, r) {
+  const x = cell(c, r);
+  if (!x || !isSolid(c, r)) { say('Tap a dirt wall to brace it.', 1500); return; }
+  if (x.braced) return;
+  const exposed = isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r+1) || isOpen(c,r-1);
+  if (!exposed) { say('That wall is not exposed — brace walls next to the hole.', 1800); return; }
+  if (money < BRACE_COST) { say(`Need $${BRACE_COST} for a brace.`, 1500); return; }
+  money -= BRACE_COST; x.braced = true; x.inst = 0;
+  blip(220, 0.1, 'square', 0.08); blip(180, 0.1, 'square', 0.08);
+  const p = tileCenter(c, r); burst(p.x, p.y - camY, '#c89b5a', 8, 80);
+}
+
+function collapse(c, r) {
+  const x = rows[r][c], m = MAT[x.t];
+  // the tile crumbles into an adjacent open cell as rubble
+  const targets = [];
+  if (isOpen(c, r+1)) targets.push([c, r+1]);
+  if (isOpen(c-1, r)) targets.push([c-1, r]);
+  if (isOpen(c+1, r)) targets.push([c+1, r]);
+  rows[r][c] = AIR();
+  if (targets.length) {
+    const [tc, tr] = targets[Math.floor(Math.random() * targets.length)];
+    rows[tr][tc] = newCell('rubble');
+  }
+  const p = tileCenter(c, r);
+  burst(p.x, p.y - camY, m.col, 20, 180);
+  shake = Math.max(shake, 10); rumble();
+  sayOnce('collapse', '💥 CAVE-IN! Loose walls crumble back into your hole. BRACE them before they go!', 4500);
+  // cascade
+  for (const [dc, dr] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+    const n = cell(c + dc, r + dr);
+    if (n && n.t !== 'air' && n.t !== 'water' && !n.braced) n.inst += 0.35;
+  }
+}
+
+function sellBag() {
+  if (!bag.length) { say('Bag is empty — dig something first!', 1400); return; }
+  let v = 0; for (const t of bag) v += MAT[t].val;
+  money += v; bag = [];
+  say(`💰 Sold the haul for $${v}!`, 1600);
+  blip(880, 0.08, 'sine', 0.09); setTimeout(() => blip(1174, 0.12, 'sine', 0.09), 90);
+}
+const bagValue = () => bag.reduce((s, t) => s + MAT[t].val, 0);
+
+// ============================== SIMULATION =================================
+let waterTimer = 0, pumpTimer = 0;
+
+function update(dt) {
+  // --- wall instability & cave-ins ---
+  // snapshot the count: neighbour checks below call ensureRows() and grow the
+  // array, which would otherwise keep this loop alive forever
+  const nRows = rows.length;
+  for (let r = 1; r < nRows; r++) {
+    for (let c = 0; c < W; c++) {
+      const x = rows[r][c];
+      if (x.t === 'air' || x.t === 'water' || x.braced) continue;
+      const m = MAT[x.t];
+      let rate = 0;
+      if (m.crumble > 0 && (isOpen(c-1, r) || isOpen(c+1, r))) rate += m.crumble;
+      if (isAir(c, r+1) && m.crumble > 0) rate += m.crumble * 4 + 0.02;  // hanging ceiling
+      if (rate > 0) {
+        x.inst += rate * dt * (1 + r * 0.01);
+        if (x.inst >= 1) collapse(c, r);
+      } else if (x.inst > 0) x.inst = Math.max(0, x.inst - dt * 0.05);
+    }
+  }
+  // --- water gravity ---
+  waterTimer += dt;
+  if (waterTimer > 0.14) {
+    waterTimer = 0;
+    for (let r = rows.length - 2; r >= 0; r--) for (let c = 0; c < W; c++) {
+      if (rows[r][c].t !== 'water') continue;
+      if (rows[r+1] && rows[r+1][c].t === 'air') { rows[r+1][c] = rows[r][c]; rows[r][c] = AIR(); }
+      else {
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        if (cell(c+dir, r) && rows[r][c+dir].t === 'air') { rows[r][c+dir] = rows[r][c]; rows[r][c] = AIR(); }
+      }
+    }
+  }
+  // --- pump ---
+  if (pumpLvl > 0) {
+    pumpTimer += dt;
+    const interval = 1 / (0.8 * pumpLvl);
+    if (pumpTimer > interval) {
+      pumpTimer = 0;
+      outer: for (let r = 0; r < rows.length; r++) for (let c = 0; c < W; c++)
+        if (rows[r][c].t === 'water') { rows[r][c] = AIR(); blip(500, 0.05, 'sine', 0.03); break outer; }
+    }
+  }
+  // --- tourist income ---
+  if (record >= 10) money += record * 0.06 * dt;
+  // --- particles ---
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  // --- camera ---
+  if (followCam) camY += (camTarget - camY) * Math.min(1, dt * 5);
+  if (shake > 0) shake = Math.max(0, shake - dt * 18);
+}
+
+// ============================== RENDER =====================================
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+let scale = 1;
+
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr;
+  scale = cv.clientWidth / VIEW_W;
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+function viewH() { return cv.clientHeight / scale; }
+function clampCam(v) { return Math.max(0, Math.min(v, SURFACE + (record + 6) * T - viewH() * 0.7)); }
+
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.max(0, ((n >> 16) & 255) * f)),
+        g = Math.min(255, Math.max(0, ((n >> 8) & 255) * f)),
+        b = Math.min(255, Math.max(0, (n & 255) * f));
+  return `rgb(${r|0},${g|0},${b|0})`;
+}
+
+function draw(time) {
+  const H = viewH();
+  ctx.clearRect(0, 0, VIEW_W, H);
+  const sx = shake ? (Math.random() - 0.5) * shake : 0;
+  const sy = shake ? (Math.random() - 0.5) * shake : 0;
+  ctx.save(); ctx.translate(sx, sy - camY);
+
+  // sky
+  const skyH = SURFACE;
+  if (camY < skyH + 40) {
+    const g = ctx.createLinearGradient(0, -200, 0, skyH);
+    g.addColorStop(0, '#79c4f2'); g.addColorStop(1, '#cfe9fa');
+    ctx.fillStyle = g; ctx.fillRect(0, camY - 200, VIEW_W, skyH - camY + 200 + 40);
+    ctx.fillStyle = '#ffe28a'; ctx.beginPath(); ctx.arc(VIEW_W - 80, 40, 26, 0, 7); ctx.fill();
+    // tourists at the rim
+    if (record >= 10) {
+      const n = Math.min(12, 2 + Math.floor(record / 10) * 2);
+      ctx.font = '22px sans-serif'; ctx.textAlign = 'center';
+      for (let i = 0; i < n; i++) {
+        const px = 30 + ((i * 97) % (VIEW_W - 60));
+        const bob = Math.sin(time / 400 + i) * 2;
+        ctx.fillText(['🧍','🧍‍♀️','📸','🤳','🧍'][i % 5], px, skyH - 6 + bob);
+      }
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#374151';
+      ctx.fillText('👀 tourists paying $' + (record * 0.06).toFixed(2) + '/s', VIEW_W / 2, 26);
+    }
+    // sign
+    ctx.font = '15px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#7a4a20'; ctx.fillRect(14, skyH - 46, 4, 40);
+    ctx.fillStyle = '#a56a30'; ctx.fillRect(2, skyH - 56, 62, 22);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('THE HOLE', 33, skyH - 41);
+  }
+
+  // visible rows
+  const r0 = Math.max(0, Math.floor((camY - SURFACE) / T) - 1);
+  const r1 = Math.floor((camY + H - SURFACE) / T) + 1;
+  ensureRows(r1);
+
+  // bedrock edges
+  ctx.fillStyle = '#26222e';
+  const edgeTop = Math.max(SURFACE, camY);
+  ctx.fillRect(0, edgeTop, EDGE, H + camY - edgeTop);
+  ctx.fillRect(VIEW_W - EDGE, edgeTop, EDGE, H + camY - edgeTop);
+
+  for (let r = r0; r <= r1; r++) {
+    if (r < 0 || !rows[r]) continue;
+    const y = SURFACE + r * T;
+    for (let c = 0; c < W; c++) {
+      const x = rows[r][c], px = EDGE + c * T;
+      if (x.t === 'air') {
+        const g = ctx.createLinearGradient(0, y, 0, y + T);
+        g.addColorStop(0, '#171422'); g.addColorStop(1, '#0e0c16');
+        ctx.fillStyle = g; ctx.fillRect(px, y, T, T);
+        continue;
+      }
+      if (x.t === 'water') {
+        ctx.fillStyle = '#0e0c16'; ctx.fillRect(px, y, T, T);
+        ctx.fillStyle = 'rgba(52,120,190,0.8)'; ctx.fillRect(px, y, T, T);
+        if (!isWater(c, r-1)) {  // surface wave
+          ctx.fillStyle = 'rgba(160,210,255,0.7)';
+          const w = Math.sin(time / 300 + c) * 2;
+          ctx.fillRect(px, y + w + 2, T, 3);
+        }
+        continue;
+      }
+      if (!revealed(c, r)) {
+        // unknown earth — keep the mystery
+        const g = ctx.createLinearGradient(0, y, 0, y + T);
+        g.addColorStop(0, '#241b13'); g.addColorStop(1, '#1a130d');
+        ctx.fillStyle = g; ctx.fillRect(px, y, T, T);
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        for (let i = 0; i < 3; i++) {
+          const rx = ((x.seed * 137 + i * 61) % 1) * (T - 10), ry = ((x.seed * 291 + i * 97) % 1) * (T - 10);
+          ctx.fillRect(px + 5 + (rx|0), y + 5 + (ry|0), 4, 3);
+        }
+        continue;
+      }
+      const m = MAT[x.t];
+      // front face
+      const g = ctx.createLinearGradient(0, y, 0, y + T);
+      g.addColorStop(0, shade(m.col, 1.06)); g.addColorStop(1, shade(m.col, 0.82));
+      ctx.fillStyle = g; ctx.fillRect(px, y, T, T);
+      // texture speckles (stable per tile)
+      ctx.fillStyle = shade(m.col, 0.7);
+      for (let i = 0; i < 4; i++) {
+        const rx = ((x.seed * 137 + i * 61) % 1) * (T - 10), ry = ((x.seed * 291 + i * 97) % 1) * (T - 10);
+        ctx.fillRect(px + 5 + (rx|0), y + 5 + (ry|0), 4, 3);
+      }
+      if (x.t === 'coal' || x.t === 'iron' || x.t === 'gold' || x.t === 'gem') {
+        ctx.fillStyle = x.t === 'gem' ? '#7ff5ec' : x.t === 'gold' ? '#ffe066' : shade(m.col, 1.5);
+        for (let i = 0; i < 5; i++) {
+          const rx = ((x.seed * 511 + i * 83) % 1) * (T - 14), ry = ((x.seed * 731 + i * 53) % 1) * (T - 14);
+          ctx.beginPath(); ctx.arc(px + 8 + rx, y + 8 + ry, 3.4, 0, 7); ctx.fill();
+        }
+      }
+      // 2.5D: lit top face when exposed above
+      if (r === 0 || isAir(c, r-1)) {
+        ctx.fillStyle = r === 0 ? '#4e8f3a' : shade(m.col, 1.35);
+        ctx.beginPath();
+        ctx.moveTo(px, y); ctx.lineTo(px + 7, y - 8); ctx.lineTo(px + T + 7, y - 8);
+        ctx.lineTo(px + T, y); ctx.closePath(); ctx.fill();
+        if (r === 0) { ctx.fillStyle = '#5ea847'; ctx.fillRect(px, y, T, 6); }
+      }
+      // shaded side face when exposed to the right
+      if (isOpen(c+1, r)) {
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fillRect(px + T - 6, y, 6, T);
+      }
+      if (isOpen(c-1, r)) {
+        ctx.fillStyle = 'rgba(255,255,255,0.10)';
+        ctx.fillRect(px, y, 5, T);
+      }
+      // damage cracks
+      const dr = x.dmg / m.hp;
+      if (dr > 0.15) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.moveTo(px + T*0.5, y + T*0.15); ctx.lineTo(px + T*0.35, y + T*0.45);
+        if (dr > 0.45) { ctx.lineTo(px + T*0.6, y + T*0.7); ctx.moveTo(px + T*0.35, y + T*0.45); ctx.lineTo(px + T*0.15, y + T*0.6); }
+        if (dr > 0.75) { ctx.moveTo(px + T*0.6, y + T*0.7); ctx.lineTo(px + T*0.5, y + T*0.92); ctx.moveTo(px + T*0.7, y + T*0.3); ctx.lineTo(px + T*0.88, y + T*0.5); }
+        ctx.stroke();
+      }
+      // instability warning: red cracks + tremble
+      if (x.inst > 0.45) {
+        const jx = x.inst > 0.72 ? (Math.random() - 0.5) * 3 : 0;
+        ctx.strokeStyle = `rgba(255,80,60,${0.25 + x.inst * 0.5})`; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(px + 8 + jx, y + 6); ctx.lineTo(px + T*0.4 + jx, y + T*0.5);
+        ctx.lineTo(px + T*0.25 + jx, y + T*0.9);
+        ctx.moveTo(px + T*0.4 + jx, y + T*0.5); ctx.lineTo(px + T*0.75 + jx, y + T*0.8);
+        ctx.stroke();
+        if (x.inst > 0.72 && Math.random() < 0.1) {
+          const p = tileCenter(c, r); burst(p.x, p.y - camY + T*0.4, MAT[x.t].col, 1, 40);
+        }
+      }
+      // brace
+      if (x.braced) {
+        ctx.strokeStyle = '#c89b5a'; ctx.lineWidth = 6;
+        ctx.strokeRect(px + 4, y + 4, T - 8, T - 8);
+        ctx.beginPath(); ctx.moveTo(px + 6, y + 6); ctx.lineTo(px + T - 6, y + T - 6); ctx.stroke();
+      }
+      // highlight diggable frontier subtly
+      if (diggable(c, r) && !braceMode) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1.5;
+        ctx.strokeRect(px + 1, y + 1, T - 2, T - 2);
+      }
+    }
+    // depth marker every 5 m
+    if (r > 0 && r % 5 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(r + ' m', 4, y + 14);
+    }
+  }
+
+  // particles (already in screen-space-ish: stored minus camY at spawn — draw in world space)
+  ctx.restore();
+  ctx.save(); ctx.translate(sx, sy);
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2));
+    ctx.fillStyle = p.col; ctx.fillRect(p.x - p.sz/2, p.y - p.sz/2, p.sz, p.sz);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ============================== HUD / SHOP =================================
+const $ = id => document.getElementById(id);
+function refreshHUD() {
+  $('depthTxt').textContent = record + ' m';
+  $('moneyTxt').textContent = Math.floor(money);
+  $('sellSub').textContent = `bag ${bag.length}/${bagCap} · $${bagValue()}`;
+}
+
+function renderShop() {
+  const el = $('shopItems'); el.replaceChildren();
+  const add = (ic, title, sub, cost, fn, done) => {
+    const d = document.createElement('div'); d.className = 'item';
+    const b = document.createElement('button');
+    b.textContent = done ? 'MAX' : '$' + cost;
+    b.disabled = done || money < cost;
+    b.onclick = () => { if (money >= cost) { money -= cost; fn(); refreshHUD(); renderShop(); blip(700, 0.1, 'sine', 0.08); } };
+    d.innerHTML = `<div class="ic">${ic}</div><div class="tx"><b>${title}</b><span>${sub}</span></div>`;
+    d.appendChild(b); el.appendChild(d);
+  };
+  const next = TOOLS[toolIdx + 1];
+  if (next) add(next.ic, next.name, `${next.note} (power ${next.power})`, next.cost, () => { toolIdx++; say(`${next.ic} ${next.name} equipped!`, 2000); });
+  else add('🏆', 'Best tool owned', 'The earth trembles before you.', 0, () => {}, true);
+  const bagCost = 50 * Math.pow(2, bagLvl);
+  add('🎒', `Bigger bag (${bagCap} → ${bagCap + 10})`, 'Haul more before selling.', bagCost, () => { bagLvl++; bagCap += 10; });
+  const pumpCost = 250 * Math.pow(2, pumpLvl);
+  add('🚰', pumpLvl === 0 ? 'Water pump' : `Pump level ${pumpLvl + 1}`,
+      pumpLvl === 0 ? 'Automatically drains flooded tiles.' : 'Pumps water faster.',
+      pumpCost, () => { pumpLvl++; say('🚰 Pump ' + (pumpLvl === 1 ? 'installed!' : 'upgraded!'), 1800); });
+  const d = document.createElement('div'); d.className = 'item';
+  d.innerHTML = `<div class="ic">🪵</div><div class="tx"><b>Braces — $${BRACE_COST} each</b>
+    <span>Toggle BRACE mode and tap a cracking wall to freeze it forever. Clay rarely needs it; gravel always does.</span></div>`;
+  el.appendChild(d);
+}
+
+$('sellBtn').onclick = () => { audio(); sellBag(); refreshHUD(); };
+$('braceBtn').onclick = () => { audio(); braceMode = !braceMode; $('braceBtn').classList.toggle('on', braceMode);
+  say(braceMode ? '🪵 BRACE mode — tap walls to support them.' : 'Back to digging.', 1400); };
+$('shopBtn').onclick = () => { audio(); renderShop(); $('shop').classList.add('open'); };
+$('closeShop').onclick = () => $('shop').classList.remove('open');
+
+// ============================== INPUT ======================================
+let pDown = null, dragging = false;
+cv.addEventListener('pointerdown', e => {
+  audio();
+  pDown = { x: e.clientX, y: e.clientY, camY };
+  dragging = false;
+});
+cv.addEventListener('pointermove', e => {
+  if (!pDown) return;
+  const dy = e.clientY - pDown.y, dx = e.clientX - pDown.x;
+  if (!dragging && Math.hypot(dx, dy) > 12) { dragging = true; followCam = false; }
+  if (dragging) camY = clampCam(pDown.camY - dy / scale);
+});
+cv.addEventListener('pointerup', e => {
+  if (pDown && !dragging) {
+    const rect = cv.getBoundingClientRect();
+    const lx = (e.clientX - rect.left) / scale;
+    const ly = (e.clientY - rect.top) / scale + camY;
+    const c = Math.floor((lx - EDGE) / T);
+    const r = Math.floor((ly - SURFACE) / T);
+    if (c >= 0 && c < W && r >= 0) {
+      if (braceMode) brace(c, r); else dig(c, r);
+      followCam = true; camTarget = clampCam(camY);
+      refreshHUD();
+    }
+  }
+  pDown = null; dragging = false;
+});
+cv.addEventListener('pointercancel', () => { pDown = null; dragging = false; });
+window.addEventListener('wheel', e => { followCam = false; camY = clampCam(camY + e.deltaY / scale); }, { passive: true });
+
+// ============================== MAIN LOOP ==================================
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt);
+  draw(now);
+  refreshHUD();
+  requestAnimationFrame(frame);
+}
+resize();
+say('👇 Tap the grass to start digging. Drag to look around.', 4000);
+requestAnimationFrame(frame);
+
+// dev/test handle (harmless in production, handy for playtesting)
+window.__hole = { rows, newCell, snapshot: () => ({ money, record, bag: bag.slice(), pumpLvl }), cheat: v => { money += v; } };
+
+</script>
+</body>
+</html>
