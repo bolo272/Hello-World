@@ -107,9 +107,11 @@ buildings that make the *hole itself* the character that grows.
 
 ## 7. Presentation — 2.5D
 
-- Side-on cutaway of the hole, tiles rendered as chunky blocks with a lit
-  top face and shaded side face (oblique/"2.5D" look) — readable on a small
-  screen, cheap to produce, and cracks/braces/water read instantly.
+- Side-on cutaway of the hole in chunky pixel art (low-res buffer,
+  nearest-neighbour upscale): every material has a hand-built 16×16 texture,
+  lit top edges and shaded sides keep the 2.5D read, torches light the shaft
+  as it deepens and darkness grows with depth. Readable on a small screen
+  and unmistakably a crafted game, not UI chrome.
 - Juice budget goes to the hook: collapses get screen shake, dust plumes and
   rumble; breakthroughs get flashes and fanfares; plain digging gets modest
   crumb particles so the contrast stays big.
@@ -132,12 +134,16 @@ works with a mouse too):
 cd hole-game && python3 -m http.server 8000   # or just open index.html
 ```
 
-Implemented: tap-to-dig, drag-to-scroll, 10 materials, tool tiers with
-hard-rock gating, bag/sell economy, wall instability with warning cracks,
-cascading collapses with physically tumbling debris that lands as rubble,
-braces, water pockets + flooding with fluid water motion + pump, tourists
-with passive income, depth milestones, fog of war, 2.5D block rendering,
-particles, screen shake, and synthesized sound effects.
+Implemented: tap-to-dig with an animated tool swing and impact frames,
+drag-to-scroll, 10 hand-textured pixel-art materials, tool tiers with
+hard-rock gating, bag/sell economy with coins that fly to the counter,
+wall instability with warning cracks and a blinking "!", cascading
+collapses with physically tumbling debris that lands as rubble, braces
+(with plank-ghost preview in brace mode), water pockets + flooding with
+fluid water motion + pump, pixel tourists who photograph the hole and
+toss coins, torches + depth darkness, floating feedback text on every
+action ("+1 CLAY", "NEED PICKAXE", "BAG FULL"), onboarding hints, depth
+milestones, fog of war, particles, screen shake, and synthesized sound.
 
 Not yet: saving, meta-buildings, artifacts/events, balancing beyond
 "feels okay for a first playtest".
