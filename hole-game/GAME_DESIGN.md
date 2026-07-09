@@ -1,158 +1,116 @@
-# THE HOLE — Game Design Document (v0.1)
+# THE HOLE — Game Design Document (v0.3, "a quiet digging toy")
 
-A smartphone game about digging the deepest hole on Earth.
+A PC game about slowly, contentedly digging a hole.
 
-**One-line pitch:** The earth fights back — you dig anyway.
+**One-line pitch:** Tiny Glade, but downward.
 
 ---
 
-## 1. Core fantasy & hook
+## 1. Direction (pivoted in v0.3)
 
-The player digs a hole. That's it — and that's the point. The depth counter is
-the score, the bragging right, the reason to keep going.
+Earlier prototypes (v0.1–v0.2, see §8) were mobile tap-loops with an
+economy, upgrades and hazard pressure. Playtesting verdict: however the
+presentation was dressed, the *structure* still felt like a freemium
+game. v0.3 discards that structure entirely and rebuilds on the design
+values of Tiny Glade:
 
-The **hook is the struggle against the elements**, not the digging itself.
-Digging is the *reward*; the earth constantly tries to take it away from you:
+- **No fail states. No economy. No numbers to grow.** Nothing is won,
+  nothing is lost, nothing asks to be optimised.
+- **The craft itself is the game.** You carve — smoothly, with the
+  mouse, like sculpting — and the result is a cross-section diorama
+  that is yours.
+- **The world answers with charm, not punishment.** Everything you do
+  makes the scene *more alive*, never less.
 
-- **Cave-ins** — unsupported walls crack, crumble, and dump rubble back into
-  your hole. Hours of progress can literally fall on your head. Bracing walls
-  in time (or watching them collapse because you got greedy) is the core
-  tension.
-- **Water pockets** — crack the wrong tile and your hole floods from the
-  bottom. Now you can't dig until you pump it out.
-- **Hard layers** — rock and granite are literal walls of progression. Your
-  shovel bounces off. You *need* that pickaxe, that jackhammer, that drill.
+## 2. The player verb
 
-Every one of these should follow the same emotional curve:
-**setback → tool/tactic → triumphant breakthrough**. Overcoming an obstacle
-must always feel louder and juicier than plain digging (screen shake,
-particles, sound, a depth-milestone banner).
+Hold the left mouse button and the earth softly erodes under a round
+brush — a continuous, organic carve, not tile-clicking. Strata have
+*texture* rather than gates: loam melts away, clay drags pleasantly,
+sand pours, stone takes patient grinding (and rewards it with pebbles
+that tumble and clatter). Right-click hangs a little lantern. Scroll
+descends. That's the whole control surface.
 
-## 2. Core loop
+## 3. The world answers
 
-```
-DIG  →  fill your bag with material  →  SELL at the surface  →  money
- ↑                                                               ↓
- └────────  buy better tools / braces / pumps / capacity  ───────┘
-```
+| You do | The world does |
+|---|---|
+| carve near the surface | roots emerge from the ceiling and sway; grass keeps waving at the rim |
+| undermine sand | it trickles down in soft golden threads |
+| grind through stone | pebbles pop out, bounce, settle, and become part of the floor |
+| breach a spring | water seeps out gently and gathers into a still pool |
+| leave a pool alone | mushrooms grow in the damp |
+| dig below a pool | it drains downward, quietly finding its new level |
+| reach the deep (12 m+) | glow-worms dot the walls; crystals glint mint-green in the dark |
+| hang a lantern | warm light pools on the walls; moths orbit it at night |
+| move the cursor near a bird | it startles and flies away (it comes back) |
 
-Secondary loop: **depth record → tourists arrive → passive income** —
-the hole itself becomes an attraction and a money printer, which funds
-riskier, deeper digging.
+## 4. Time and light
 
-## 3. Materials (the terrain is the enemy roster)
+A slow day/night cycle (~5 minutes) drifts through dawn, day, dusk and
+night — the palette, hills, sun/moon and ambient sounds follow. Darkness
+grows with depth; light is the deep game's texture: lantern pools,
+crystal glow, fireflies at night, glow-worm constellations. The hole at
+20 m under moonlight, strung with lanterns above a still pool, is the
+screenshot players share.
 
-| Material | Depth | Toughness | Value | Threat / personality |
-|---|---|---|---|---|
-| Topsoil / dirt | 0 m+ | trivial | low | tutorial; crumbles slowly |
-| Clay | 3 m+ | slow to dig | decent | stable walls — a *good* neighbour |
-| Gravel / sand | 4 m+ | easy | low | **collapses fast** — the trap: easy to dig, dangerous to leave exposed |
-| Rock | 6 m+ | needs Pickaxe | good | first hard progression wall |
-| Coal / iron | 8 m+ | medium | good | first "jackpot" moments |
-| Water pocket | 8 m+ | one hit | none | floods the hole from the bottom |
-| Gold / gems | 20 m+ | hard | high | risk-reward: often embedded near hazards |
-| Granite | 25 m+ | needs Drill | very high | endgame wall; also *never collapses* — safe corridor material |
+## 5. Presentation
 
-Design rule: every material is either an **obstacle**, a **payout**, or a
-**structural property** (stable vs. crumbly) — ideally two of the three.
+- Soft painterly 2D: terrain built from overlapping soft-edged blobs
+  (no visible grid), pastel palette — sage hills, warm loam, clay rose,
+  mauve stone, deep indigo caves, lantern amber, crystal mint.
+- UI is nearly absent: a quiet depth figure bottom-left, a sound toggle,
+  whispered one-line hints in Quicksand. No banners, no meters, no icons.
+- Depth markers exist *in the world* — small etched stones on the bank
+  wall every 10 m.
+- Audio: soft dig scuffs per material, pebble clicks, water drips,
+  birdsong by day, wind pad underneath. Everything at a murmur.
 
-## 4. Hazard systems
+## 6. Session shape
 
-### Cave-ins (the star of the show)
-- Any solid tile exposed to open air (side or ceiling) gains *instability*
-  over time; crumbly materials (gravel, dirt) destabilise fast, clay slowly,
-  rock/granite never.
-- Warning phase: cracks appear, tile trembles → player has a window to react.
-- Collapse: tile bursts into **rubble that falls back into the hole** and
-  must be re-dug (rubble is near-worthless — the punishment is lost time).
-- Collapses cascade: a falling wall destabilises its neighbours. A neglected
-  hole can eat itself in seconds. This is spectacular and should be *fun to
-  watch* even when it hurts.
-- Counter-play: **braces** (cheap consumable) freeze a wall tile forever.
-  Deciding *which* walls deserve a brace is the ongoing strategic decision.
+There is no loop to close. A session is: carve for a while, watch the
+water find its level, hang a lantern, notice it got dark, keep going or
+don't. Progression is only *place*: the strata slowly change character
+with depth (crystals below ~21 m), so descending always shows something
+new — at the pace the player chooses.
 
-### Flooding
-- Breached water pockets release water that fills the deepest open tiles.
-- Water blocks digging entirely until pumped.
-- Counter-play: **pump** (buy once, upgrade for speed). Later: sell the
-  water? (nice synergy with the "sell everything" fantasy).
+## 7. Prototype (in this repo)
 
-### Hard layers
-- Tool-tier gates, pure and simple. Hitting rock with a shovel gives a
-  loud *CLANK* and zero progress — frustration by design, so the moment the
-  pickaxe first bites through is a release.
-
-## 5. Tools & economy
-
-| Tool | Breaks | Feel |
-|---|---|---|
-| Rusty trowel | soft ground | pathetic on purpose |
-| Shovel | soft ground, faster | first upgrade dopamine |
-| Pickaxe | rock, coal | unlocks depth 6 m+ layer |
-| Jackhammer | everything but granite | power fantasy begins |
-| Plasma drill | granite | endgame; melts through anything |
-
-Other purchases: **bag capacity** (fewer trips = smoother loop),
-**braces** (consumable), **pump levels**.
-
-Money sources: selling dug material, tourist income (scales with depth
-record), later: rare artifact finds, "sponsorships" at milestone depths.
-
-## 6. Tourists (the hole as a place)
-
-At 10 m the hole gets noticed; visitors gather at the rim with cameras.
-Deeper records → more visitors → more passive income. Later versions:
-build a gift shop, viewing platform, elevator rides — all surface-side
-buildings that make the *hole itself* the character that grows.
-
-## 7. Presentation — 2.5D
-
-- Side-on cutaway of the hole in chunky pixel art (low-res buffer,
-  nearest-neighbour upscale): every material has a hand-built 16×16 texture,
-  lit top edges and shaded sides keep the 2.5D read, torches light the shaft
-  as it deepens and darkness grows with depth. Readable on a small screen
-  and unmistakably a crafted game, not UI chrome.
-- Juice budget goes to the hook: collapses get screen shake, dust plumes and
-  rumble; breakthroughs get flashes and fanfares; plain digging gets modest
-  crumb particles so the contrast stays big.
-- Portrait orientation, one-thumb play: tap to dig, drag to look up/down.
-
-## 8. Session & progression shape
-
-- 30-second loop: dig → bag full → sell.
-- 5-minute loop: afford next upgrade, survive one hazard.
-- Long arc: depth milestones (10/25/50/100 m), each introducing a new
-  material or hazard so the earth keeps escalating.
-
-## 9. Prototype (in this repo)
-
-`index.html` is a self-contained playable prototype of the core loop —
-no build step, no dependencies. Open it in any browser (best on a phone,
-works with a mouse too):
+`index.html` — self-contained, no dependencies. PC / mouse:
 
 ```
-cd hole-game && python3 -m http.server 8000   # or just open index.html
+cd hole-game && python3 -m http.server 8000   # then open localhost:8000
 ```
 
-Implemented: tap-to-dig with an animated tool swing and impact frames,
-drag-to-scroll, 10 hand-textured pixel-art materials, tool tiers with
-hard-rock gating, bag/sell economy with coins that fly to the counter,
-wall instability with warning cracks and a blinking "!", cascading
-collapses with physically tumbling debris that lands as rubble, braces
-(with plank-ghost preview in brace mode), water pockets + flooding with
-fluid water motion + pump, pixel tourists who photograph the hole and
-toss coins, torches + depth darkness, floating feedback text on every
-action ("+1 CLAY", "NEED PICKAXE", "BAG FULL"), onboarding hints, depth
-milestones, fog of war, particles, screen shake, and synthesized sound.
+Hold LMB to carve · right-click hangs a lantern · scroll or arrow keys
+to descend.
 
-Not yet: saving, meta-buildings, artifacts/events, balancing beyond
-"feels okay for a first playtest".
+Implemented: continuous soft-brush carving with per-material feel,
+procedural strata (loam/clay/sand/stone/crystal/springs), sand trickle,
+pebble physics, springs → settling pools → drainage, mushrooms,
+dangling roots, glow-worms, crystal glow, fireflies, birds that flee
+the cursor, butterflies, moths, lanterns, full day/night cycle with
+sun/moon/stars/hills, depth darkness with light punching through,
+etched depth stones, gentle synthesized ambience, and whisper-quiet UI.
 
-## 10. Open design questions
+Not yet: saving your hole (important for a toy — you want to keep it),
+more strata personalities, fossils/curios to uncover, photo mode,
+gamepad, performance polish for very deep holes.
 
-1. Should there be a digger character in the hole (can be buried by
-   collapses — higher stakes, more emergent stories) or stay "god-finger"
-   digging (current prototype — simpler, more zen)?
-2. Offline progress (idle-game DNA) or purely active play?
-3. Is rubble ever valuable (crushing plant upgrade?) so collapses become
-   partially self-compensating late-game?
+## 8. History
+
+- **v0.1** — mobile tap-to-dig prototype with tools, money, cave-in
+  hazards, tourists. Verdict: mechanically sound, felt freemium.
+- **v0.2** — pixel-art reskin with animated strikes and full feedback
+  layer. Better craft, same freemium skeleton.
+- **v0.3** — this document: structure replaced, not the skin.
+
+## 9. Open questions
+
+1. Persistence — localStorage snapshots of the carved world (grid is
+   easy; the painted canvases can be re-derived).
+2. Is there a place for very light "finds" (fossils, buried curios)
+   that stay purely decorative — museum shelf, not inventory?
+3. Wider worlds: side-scrolling as well as depth? Multiple biomes as
+   you descend (peat, chalk, sea caves)?
+4. A photo mode with depth-of-field would make sharing effortless.
