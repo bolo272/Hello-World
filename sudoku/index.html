@@ -262,13 +262,15 @@
   .primary:hover{filter:brightness(1.08)}
   .primary:active{transform:scale(.98)}
   .hint-line{font-size:12px;color:var(--muted);text-align:center;margin:0}
+  .scroll-pad{display:none}
 
   /* ---------- Mobile: one-hand dock ---------- */
   @media (max-width:860px){
     .app{gap:10px;padding-top:10px}
-    main{grid-template-columns:minmax(0,1fr);gap:0}
+    main{display:contents}
     .stats{gap:12px;font-size:13px}
     .board-wrap{width:100%}
+    .longpage .scroll-pad{display:block;height:70vh;height:70dvh}
     .dock{
       position:sticky;bottom:0;
       margin-top:auto;
@@ -365,6 +367,7 @@
 </style>
 
 <div class="app" id="app">
+  <div class="scroll-pad" aria-hidden="true"></div>
   <header>
     <div class="wordmark">Sudoku <small>Indygo</small></div>
     <div class="hdr-actions">
@@ -404,6 +407,7 @@
       <div class="overlay" id="genOverlay"><div class="inner"><div class="big">Układam planszę…</div></div></div>
     </section>
 
+    <div class="scroll-pad" aria-hidden="true"></div>
     <aside class="dock">
       <div class="tools">
         <button class="tool" id="undoBtn" title="Cofnij (Ctrl+Z)">
@@ -485,6 +489,9 @@
         <button data-theme="dark">Ciemny</button>
       </div>
     </div>
+    <label class="switch">Długa strona — przewiń planszę pod kciuk
+      <input type="checkbox" id="setLong" checked><span class="knob"></span>
+    </label>
     <label class="switch">Tryb leworęczny (klawiatura po lewej)
       <input type="checkbox" id="setLefty"><span class="knob"></span>
     </label>
@@ -639,7 +646,18 @@ function makePuzzle(diffKey){
 let S=null;            // {diff,puzzle,solution,board,notes,time,mistakes,hintsUsed,done,over}
 let sel=-1, notesMode=false, paused=false;
 let undoStack=[], redoStack=[];
-let settings={errors:true, same:true, clean:true, lefty:false, theme:"system"};
+let settings={errors:true, same:true, clean:true, lefty:false, theme:"system", longpage:true};
+const KEY_SCROLL="sudokuIndygo.scroll.v1";
+const mobileMQ=matchMedia("(max-width:860px)");
+function applyLongPage(initial){
+  const on=!!settings.longpage && mobileMQ.matches;
+  document.body.classList.toggle("longpage",on);
+  if(!on){ if(!initial) window.scrollTo(0,0); return; }
+  const pad=document.querySelector(".scroll-pad").offsetHeight;
+  let y=initial ? Number(localStorage.getItem(KEY_SCROLL)) : NaN;
+  if(!Number.isFinite(y)||y<=0) y=pad;
+  requestAnimationFrame(()=>window.scrollTo(0,y));
+}
 const darkMQ=matchMedia("(prefers-color-scheme: dark)");
 function isDark(){ return settings.theme==="dark" || (settings.theme==="system" && darkMQ.matches); }
 function applyTheme(){
@@ -1010,6 +1028,7 @@ function init(){
   $("setSame").checked=settings.same;
   $("setClean").checked=settings.clean;
   $("setLefty").checked=!!settings.lefty;
+  $("setLong").checked=settings.longpage!==false;
   buildBoard();
 
   const saved=loadJSON(KEY_STATE,null);
@@ -1053,12 +1072,22 @@ function init(){
     $(id).addEventListener("click",e=>{ if(e.target===$(id)) hideModals(); });
   }
 
-  for(const [id,key] of [["setErrors","errors"],["setSame","same"],["setClean","clean"],["setLefty","lefty"]]){
+  for(const [id,key] of [["setErrors","errors"],["setSame","same"],["setClean","clean"],["setLefty","lefty"],["setLong","longpage"]]){
     $(id).addEventListener("change",e=>{
       settings[key]=e.target.checked;
       saveSettings(); refresh();
+      if(key==="longpage") applyLongPage(false);
     });
   }
+  if("scrollRestoration" in history) history.scrollRestoration="manual";
+  applyLongPage(true);
+  mobileMQ.addEventListener("change",()=>applyLongPage(false));
+  let scrollT=null;
+  window.addEventListener("scroll",()=>{
+    if(!document.body.classList.contains("longpage")) return;
+    clearTimeout(scrollT);
+    scrollT=setTimeout(()=>{ try{ localStorage.setItem(KEY_SCROLL,String(Math.round(window.scrollY))); }catch(e){} },200);
+  },{passive:true});
 
   window.addEventListener("keydown",e=>{
     if(anyModalOpen()){
