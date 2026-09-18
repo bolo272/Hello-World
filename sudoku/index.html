@@ -740,15 +740,17 @@ function refresh(){
     if(i===sel) cls+=" sel";
     el.className=cls;
 
+    // Only touch the DOM when the content changed: replacing a cell's children
+    // mid-gesture would detach the touched element and swallow its touch events.
+    let html="";
     if(v){
-      el.textContent=v;
+      html=String(v);
     }else if(S.notes[i]){
-      let html='<span class="notes">';
+      html='<span class="notes">';
       for(let d=1;d<=9;d++) html+="<i>"+((S.notes[i]>>d)&1 ? d : "")+"</i>";
-      el.innerHTML=html+"</span>";
-    }else{
-      el.textContent="";
+      html+="</span>";
     }
+    if(el.__html!==html){ el.__html=html; el.innerHTML=html; }
   }
 
   for(let d=1;d<=9;d++) numBtns[d-1].classList.toggle("done", counts[d]>=9);
@@ -833,7 +835,7 @@ function popCell(i){
   const el=cells[i];
   requestAnimationFrame(()=>{
     const v=el.textContent;
-    if(v){ el.innerHTML='<span class="pop">'+v+"</span>"; }
+    if(v){ el.innerHTML='<span class="pop">'+v+"</span>"; el.__html=null; }
   });
 }
 
