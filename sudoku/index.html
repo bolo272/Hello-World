@@ -285,6 +285,8 @@
     .numpad,.dock .primary,.hint-line{display:none}
     body.input-grid .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:12px auto 0}
     body.input-grid .num{height:auto;min-height:62px;font-size:32px;border-radius:12px}
+    body.input-row .numpad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;margin:12px auto 0}
+    body.input-row .num{height:auto;min-height:56px;font-size:23px;border-radius:9px}
   }
 
   /* ---------- Radial digit picker ---------- */
@@ -521,9 +523,10 @@
       </div>
     </div>
     <div class="field">Wpisywanie cyfr na telefonie
-      <div class="seg two" id="inputSeg">
-        <button data-input="dial">Koło pod palcem</button>
-        <button data-input="grid">Siatka pod planszą</button>
+      <div class="seg" id="inputSeg">
+        <button data-input="dial">Koło</button>
+        <button data-input="grid">Siatka 3×3</button>
+        <button data-input="row">Rząd 1–9</button>
       </div>
     </div>
     <label class="switch">Długa strona — przewiń planszę pod kciuk
@@ -702,6 +705,7 @@ function isDark(){ return settings.theme==="dark" || (settings.theme==="system" 
 function applyInputMode(){
   document.querySelectorAll("#inputSeg button").forEach(b=>b.classList.toggle("active",b.dataset.input===settings.input));
   document.body.classList.toggle("input-grid",settings.input==="grid");
+  document.body.classList.toggle("input-row",settings.input==="row");
   if(S) refresh();
 }
 function applyTheme(){
@@ -1088,7 +1092,7 @@ function initPicker(){
     cancelPress();
     const i=cells.indexOf(cell);
     if(locked()||S.puzzle[i]) return;
-    if(settings.input==="grid") return;   // the fixed numpad handles input instead
+    if(settings.input!=="dial") return;   // a fixed keypad handles input instead
     press.idx=i; press.x=e.clientX; press.y=e.clientY; press.pid=e.pointerId; press.el=cell;
     press.timer=setTimeout(()=>openPicker(i,cell,e.pointerId),LONG_MS);
   });
@@ -1202,7 +1206,7 @@ function init(){
   }
 
   initPicker();
-  if(settings.input!=="grid" && matchMedia("(hover:none)").matches && !localStorage.getItem("sudokuIndygo.tip")){
+  if(settings.input==="dial" && matchMedia("(hover:none)").matches && !localStorage.getItem("sudokuIndygo.tip")){
     try{ localStorage.setItem("sudokuIndygo.tip","1"); }catch(e){}
     setTimeout(()=>toast("Przytrzymaj pole, aby wybrać cyfrę"),900);
   }
