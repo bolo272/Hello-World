@@ -111,6 +111,7 @@
   .dark .ico-sun{display:none}
   .dark .ico-moon{display:block}
   .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:3px;border-radius:10px;background:var(--surface-2)}
+  .seg.two{grid-template-columns:repeat(2,1fr)}
   .seg button{padding:8px 4px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
   .seg button.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.12)}
   .field{display:flex;flex-direction:column;gap:8px;text-align:left;font-size:14px}
@@ -324,7 +325,32 @@
     font-size:34px;
   }
 
-  /* The gesture track stays under the finger while the dial is drawn elsewhere */
+  /* 3x3 grid variant of the picker */
+  .pgrid{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    padding:10px;border-radius:20px;
+    background:color-mix(in srgb, var(--surface) 96%, transparent);
+    border:1px solid var(--line);
+    box-shadow:0 12px 48px rgba(0,0,0,.26);
+  }
+  .pgrid .g-digit{
+    width:62px;height:62px;border-radius:14px;
+    display:grid;place-items:center;
+    background:var(--surface-2);
+    color:var(--blue);
+    font-size:30px;font-weight:500;
+    transition:transform .08s,background .08s;
+  }
+  .pgrid .g-digit.hot{background:var(--blue);color:var(--blue-ink);transform:scale(1.08)}
+  .pgrid .g-digit.done{opacity:.35}
+  .picker.mode-grid .halo,
+  .picker.mode-grid .p-center,
+  .picker.mode-grid .p-digit{display:none}
+  .picker:not(.mode-grid) .pgrid{display:none}
+
+  /* The gesture track stays under the finger while the picker is drawn elsewhere */
   .anchor{position:fixed;left:0;top:0;width:0;height:0;display:none;z-index:14;pointer-events:none}
   .anchor.show{display:block}
   .anchor .a-ring{
@@ -334,6 +360,16 @@
     border:2px dashed var(--line);
     opacity:.85;
   }
+  .anchor .a-grid{
+    position:absolute;left:50%;top:50%;
+    width:156px;height:156px;
+    margin:-156px 0 0 -78px;
+    border-radius:14px;
+    border:2px dashed var(--line);
+    opacity:.85;
+  }
+  .anchor.grid .a-ring{display:none}
+  .anchor:not(.grid) .a-grid{display:none}
   .anchor .a-dot{
     position:absolute;left:50%;top:50%;
     width:20px;height:20px;border-radius:50%;
@@ -517,6 +553,12 @@
         <button data-theme="dark">Ciemny</button>
       </div>
     </div>
+    <div class="field">Wybór cyfr przytrzymaniem pola
+      <div class="seg two" id="inputSeg">
+        <button data-input="dial">Koło</button>
+        <button data-input="grid">Siatka 3×3</button>
+      </div>
+    </div>
     <label class="switch">Długa strona — przewiń planszę pod kciuk
       <input type="checkbox" id="setLong" checked><span class="knob"></span>
     </label>
@@ -668,7 +710,7 @@ function makePuzzle(diffKey){
 let S=null;            // {diff,puzzle,solution,board,notes,mistakes,done,over}
 let sel=-1, notesMode=false;
 let undoStack=[], redoStack=[];
-let settings={errors:true, same:true, clean:true, theme:"system", longpage:true};
+let settings={errors:true, same:true, clean:true, theme:"system", longpage:true, input:"dial"};
 const KEY_SCROLL="sudokuIndygo.scroll.v2";
 const mobileMQ=matchMedia("(max-width:860px)");
 // Park the board and its dock against the bottom edge, within thumb reach.
@@ -690,6 +732,9 @@ function applyLongPage(initial){
 }
 const darkMQ=matchMedia("(prefers-color-scheme: dark)");
 function isDark(){ return settings.theme==="dark" || (settings.theme==="system" && darkMQ.matches); }
+function applyInputMode(){
+  document.querySelectorAll("#inputSeg button").forEach(b=>b.classList.toggle("active",b.dataset.input===settings.input));
+}
 function applyTheme(){
   const root=document.documentElement;
   if(settings.theme==="system") root.removeAttribute("data-theme");
@@ -1017,9 +1062,9 @@ function confetti(){
 }
 
 /* ============================== Radial digit picker ============================== */
-const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64, VIS_RADIUS=84;
+const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64, VIS_RADIUS=84, GRID_STEP=52;
 const press={timer:null, idx:-1, x:0, y:0, pid:null, active:false, digit:0, cx:0, cy:0, el:null};
-let pDigits=[];
+let pDigits=[], gDigits=[];
 
 function initPicker(){
   const pk=$("picker");
@@ -1034,7 +1079,17 @@ function initPicker(){
     pk.appendChild(el);
     pDigits.push(el);
   }
-  $("anchor").innerHTML='<div class="a-ring"></div><div class="a-dot"></div>';
+  const grid=document.createElement("div");
+  grid.className="pgrid";
+  for(let d=1;d<=9;d++){
+    const el=document.createElement("div");
+    el.className="g-digit";
+    el.textContent=d;
+    grid.appendChild(el);
+    gDigits.push(el);
+  }
+  pk.appendChild(grid);
+  $("anchor").innerHTML='<div class="a-ring"></div><div class="a-grid"></div><div class="a-dot"></div>';
   const board=$("board");
   board.addEventListener("contextmenu",e=>e.preventDefault());
   // The board owns single-finger touch gestures: it scrolls the page itself
@@ -1106,15 +1161,19 @@ function openPicker(i,cell,pid){
   press.active=true; press.digit=0; press.pid=pid;
   const counts=new Array(10).fill(0);
   for(let k=0;k<81;k++) if(S.board[k]) counts[S.board[k]]++;
-  pDigits.forEach((el,k)=>{ el.classList.toggle("done",counts[k+1]>=9); el.classList.remove("hot"); });
+  const gridMode=settings.input==="grid";
+  for(const list of [pDigits,gDigits])
+    list.forEach((el,k)=>{ el.classList.toggle("done",counts[k+1]>=9); el.classList.remove("hot"); });
   const spot=pickerSpot(press.cx,press.cy);
   const pk=$("picker");
+  pk.classList.toggle("mode-grid",gridMode);
   pk.style.left=spot.x+"px"; pk.style.top=spot.y+"px";
   const c=pk.querySelector(".p-center");
   c.textContent=""; c.classList.remove("on");
   pk.classList.add("show");
   const an=$("anchor");
   an.style.left=press.cx+"px"; an.style.top=press.cy+"px";
+  an.classList.toggle("grid",gridMode);
   an.classList.add("show"); an.classList.remove("on");
   try{ cell.setPointerCapture(pid); }catch(e){}
   if(navigator.vibrate) navigator.vibrate(12);
@@ -1132,20 +1191,35 @@ function pickerSpot(fx,fy){
   }
   return best;
 }
+// Grid mode: the 3x3 track sits just above the finger, so releasing
+// without moving lands outside it and cancels.
+function gridPick(dx,dy){
+  if(dy>-12) return null;
+  const col=Math.floor((dx+1.5*GRID_STEP)/GRID_STEP);
+  const row=Math.floor((dy+3*GRID_STEP)/GRID_STEP);
+  if(col<0||col>2||row<0||row>2) return null;
+  return {d:row*3+col+1, x:(col-1)*GRID_STEP, y:(row-2.5)*GRID_STEP};
+}
 function updatePicker(x,y){
   const dx=x-press.cx, dy=y-press.cy;
-  const dist=Math.hypot(dx,dy);
-  let d=0;
-  if(dist>=DEAD){
-    const deg=(Math.atan2(dy,dx)*180/Math.PI+90+20+720)%360;
-    d=Math.floor(deg/40)+1;
-    if(d>9) d=9;
+  let d=0, ax=0, ay=0, aimed=false;
+  if(settings.input==="grid"){
+    const g=gridPick(dx,dy);
+    if(g){ d=g.d; ax=g.x; ay=g.y; aimed=true; }
+  }else{
+    const dist=Math.hypot(dx,dy);
+    if(dist>=DEAD){
+      const deg=(Math.atan2(dy,dx)*180/Math.PI+90+20+720)%360;
+      d=Math.min(9,Math.floor(deg/40)+1);
+      const ang=Math.atan2(dy,dx);
+      ax=RADIUS*Math.cos(ang); ay=RADIUS*Math.sin(ang); aimed=true;
+    }
   }
   const an=$("anchor");
-  if(dist>=DEAD){
-    const ang=Math.atan2(dy,dx), dot=an.querySelector(".a-dot");
-    dot.style.setProperty("--ax",(RADIUS*Math.cos(ang)).toFixed(1)+"px");
-    dot.style.setProperty("--ay",(RADIUS*Math.sin(ang)).toFixed(1)+"px");
+  if(aimed){
+    const dot=an.querySelector(".a-dot");
+    dot.style.setProperty("--ax",ax.toFixed(1)+"px");
+    dot.style.setProperty("--ay",ay.toFixed(1)+"px");
     an.classList.add("on");
   }else{
     an.classList.remove("on");
@@ -1153,6 +1227,7 @@ function updatePicker(x,y){
   if(d!==press.digit){
     press.digit=d;
     pDigits.forEach((el,k)=>el.classList.toggle("hot",k+1===d));
+    gDigits.forEach((el,k)=>el.classList.toggle("hot",k+1===d));
     const c=$("picker").querySelector(".p-center");
     c.textContent=d?String(d):"";
     c.classList.toggle("on",!!d);
@@ -1163,7 +1238,7 @@ function closePicker(){
   if(!press.active) return;
   press.active=false; press.digit=0;
   $("picker").classList.remove("show");
-  $("anchor").classList.remove("show","on");
+  $("anchor").classList.remove("show","on","grid");
   try{ press.el && press.el.releasePointerCapture(press.pid); }catch(e){}
 }
 
@@ -1203,6 +1278,10 @@ function init(){
   $("confirmNo").addEventListener("click",()=>{ pendingDiff=null; hideModals(); });
   $("settingsBtn").addEventListener("click",()=>$("settingsModal").classList.add("show"));
   applyTheme();
+  applyInputMode();
+  document.querySelectorAll("#inputSeg button").forEach(b=>b.addEventListener("click",()=>{
+    settings.input=b.dataset.input; saveSettings(); applyInputMode();
+  }));
   $("themeBtn").addEventListener("click",()=>{ settings.theme=isDark()?"light":"dark"; saveSettings(); applyTheme(); });
   document.querySelectorAll("#themeSeg button").forEach(b=>b.addEventListener("click",()=>{ settings.theme=b.dataset.theme; saveSettings(); applyTheme(); }));
   darkMQ.addEventListener("change",applyTheme);
