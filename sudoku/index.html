@@ -289,33 +289,59 @@
   .picker.show{display:block}
   .picker .halo{
     position:absolute;left:50%;top:50%;
-    width:196px;height:196px;border-radius:50%;
+    width:232px;height:232px;border-radius:50%;
     transform:translate(-50%,-50%);
-    background:color-mix(in srgb, var(--surface) 88%, transparent);
-    box-shadow:0 10px 40px rgba(0,0,0,.22);
+    background:color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow:0 12px 48px rgba(0,0,0,.26);
     border:1px solid var(--line);
   }
   .picker .p-digit{
     position:absolute;left:0;top:0;
-    width:46px;height:46px;border-radius:50%;
+    width:52px;height:52px;border-radius:50%;
     display:grid;place-items:center;
     background:var(--surface-2);
     color:var(--blue);
-    font-size:26px;font-weight:500;
+    font-size:28px;font-weight:500;
     transform:translate(calc(var(--x) - 50%), calc(var(--y) - 50%));
     transition:transform .08s,background .08s;
   }
   .picker .p-digit.hot{
     background:var(--blue);color:var(--blue-ink);
-    transform:translate(calc(var(--x) - 50%), calc(var(--y) - 50%)) scale(1.25);
+    transform:translate(calc(var(--x) - 50%), calc(var(--y) - 50%)) scale(1.3);
   }
   .picker .p-digit.done{opacity:.35}
   .picker .p-center{
     position:absolute;left:50%;top:50%;
-    width:14px;height:14px;border-radius:50%;
+    width:12px;height:12px;border-radius:50%;
+    display:grid;place-items:center;
     transform:translate(-50%,-50%);
     background:var(--line);
+    color:var(--blue);
+    font-size:0;font-weight:600;
   }
+  .picker .p-center.on{
+    width:auto;height:auto;background:none;
+    font-size:34px;
+  }
+
+  /* The gesture track stays under the finger while the dial is drawn elsewhere */
+  .anchor{position:fixed;left:0;top:0;width:0;height:0;display:none;z-index:14;pointer-events:none}
+  .anchor.show{display:block}
+  .anchor .a-ring{
+    position:absolute;left:50%;top:50%;
+    width:128px;height:128px;margin:-64px 0 0 -64px;
+    border-radius:50%;
+    border:2px dashed var(--line);
+    opacity:.85;
+  }
+  .anchor .a-dot{
+    position:absolute;left:50%;top:50%;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--blue);
+    opacity:0;
+    transform:translate(calc(var(--ax) - 50%), calc(var(--ay) - 50%));
+  }
+  .anchor.on .a-dot{opacity:1}
 
   /* ---------- Modals ---------- */
   .modal{
@@ -498,6 +524,7 @@
   </div>
 </div>
 
+<div class="anchor" id="anchor" aria-hidden="true"></div>
 <div class="picker" id="picker" aria-hidden="true"></div>
 <canvas id="confetti"></canvas>
 <div class="toast" id="toast"></div>
@@ -982,7 +1009,7 @@ function confetti(){
 }
 
 /* ============================== Radial digit picker ============================== */
-const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64;
+const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64, VIS_RADIUS=84;
 const press={timer:null, idx:-1, x:0, y:0, pid:null, active:false, digit:0, cx:0, cy:0, el:null};
 let pDigits=[];
 
@@ -994,11 +1021,12 @@ function initPicker(){
     const el=document.createElement("div");
     el.className="p-digit";
     el.textContent=d;
-    el.style.setProperty("--x",(RADIUS*Math.cos(a)).toFixed(1)+"px");
-    el.style.setProperty("--y",(RADIUS*Math.sin(a)).toFixed(1)+"px");
+    el.style.setProperty("--x",(VIS_RADIUS*Math.cos(a)).toFixed(1)+"px");
+    el.style.setProperty("--y",(VIS_RADIUS*Math.sin(a)).toFixed(1)+"px");
     pk.appendChild(el);
     pDigits.push(el);
   }
+  $("anchor").innerHTML='<div class="a-ring"></div><div class="a-dot"></div>';
   const board=$("board");
   board.addEventListener("contextmenu",e=>e.preventDefault());
   // The board owns single-finger touch gestures: it scrolls the page itself
@@ -1064,30 +1092,61 @@ function openPicker(i,cell,pid){
   if(locked()||S.puzzle[i]) return;
   sel=i; refresh();
   const r=cell.getBoundingClientRect();
-  const margin=RADIUS+30;
-  press.cx=Math.min(Math.max(r.left+r.width/2, margin), innerWidth-margin);
-  press.cy=Math.min(Math.max(r.top+r.height/2, margin), innerHeight-margin);
+  // The gesture is measured around the held cell; the dial is drawn far from the finger.
+  press.cx=r.left+r.width/2;
+  press.cy=r.top+r.height/2;
   press.active=true; press.digit=0; press.pid=pid;
   const counts=new Array(10).fill(0);
   for(let k=0;k<81;k++) if(S.board[k]) counts[S.board[k]]++;
   pDigits.forEach((el,k)=>{ el.classList.toggle("done",counts[k+1]>=9); el.classList.remove("hot"); });
+  const spot=pickerSpot(press.cx,press.cy);
   const pk=$("picker");
-  pk.style.left=press.cx+"px"; pk.style.top=press.cy+"px";
+  pk.style.left=spot.x+"px"; pk.style.top=spot.y+"px";
+  const c=pk.querySelector(".p-center");
+  c.textContent=""; c.classList.remove("on");
   pk.classList.add("show");
+  const an=$("anchor");
+  an.style.left=press.cx+"px"; an.style.top=press.cy+"px";
+  an.classList.add("show"); an.classList.remove("on");
   try{ cell.setPointerCapture(pid); }catch(e){}
   if(navigator.vibrate) navigator.vibrate(12);
 }
+function pickerSpot(fx,fy){
+  const vw=innerWidth, vh=innerHeight, M=VIS_RADIUS+42;  // halo radius + breathing room
+  const cands=[{x:vw/2,y:M},{x:vw/2,y:vh-M},{x:M,y:vh/2},{x:vw-M,y:vh/2}];
+  let best=null, bd=-1;
+  for(const c of cands){
+    c.x=Math.min(Math.max(c.x,M),Math.max(M,vw-M));
+    c.y=Math.min(Math.max(c.y,M),Math.max(M,vh-M));
+    const d=Math.hypot(c.x-fx,c.y-fy);
+    if(d>bd){ bd=d; best=c; }
+  }
+  return best;
+}
 function updatePicker(x,y){
   const dx=x-press.cx, dy=y-press.cy;
+  const dist=Math.hypot(dx,dy);
   let d=0;
-  if(Math.hypot(dx,dy)>=DEAD){
+  if(dist>=DEAD){
     const deg=(Math.atan2(dy,dx)*180/Math.PI+90+20+720)%360;
     d=Math.floor(deg/40)+1;
     if(d>9) d=9;
   }
+  const an=$("anchor");
+  if(dist>=DEAD){
+    const ang=Math.atan2(dy,dx), dot=an.querySelector(".a-dot");
+    dot.style.setProperty("--ax",(RADIUS*Math.cos(ang)).toFixed(1)+"px");
+    dot.style.setProperty("--ay",(RADIUS*Math.sin(ang)).toFixed(1)+"px");
+    an.classList.add("on");
+  }else{
+    an.classList.remove("on");
+  }
   if(d!==press.digit){
     press.digit=d;
     pDigits.forEach((el,k)=>el.classList.toggle("hot",k+1===d));
+    const c=$("picker").querySelector(".p-center");
+    c.textContent=d?String(d):"";
+    c.classList.toggle("on",!!d);
     if(d && navigator.vibrate) navigator.vibrate(6);
   }
 }
@@ -1095,6 +1154,7 @@ function closePicker(){
   if(!press.active) return;
   press.active=false; press.digit=0;
   $("picker").classList.remove("show");
+  $("anchor").classList.remove("show","on");
   try{ press.el && press.el.releasePointerCapture(press.pid); }catch(e){}
 }
 
