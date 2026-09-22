@@ -283,6 +283,8 @@
     .tool{font-size:12px}
     .tool .ring{width:56px;height:56px}
     .numpad,.dock .primary,.hint-line{display:none}
+    body.input-grid .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:12px auto 0}
+    body.input-grid .num{height:auto;min-height:62px;font-size:32px;border-radius:12px}
   }
 
   /* ---------- Radial digit picker ---------- */
@@ -325,31 +327,6 @@
     font-size:34px;
   }
 
-  /* 3x3 grid variant of the picker */
-  .pgrid{
-    position:absolute;left:50%;top:50%;
-    transform:translate(-50%,-50%);
-    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-    padding:10px;border-radius:20px;
-    background:color-mix(in srgb, var(--surface) 96%, transparent);
-    border:1px solid var(--line);
-    box-shadow:0 12px 48px rgba(0,0,0,.26);
-  }
-  .pgrid .g-digit{
-    width:62px;height:62px;border-radius:14px;
-    display:grid;place-items:center;
-    background:var(--surface-2);
-    color:var(--blue);
-    font-size:30px;font-weight:500;
-    transition:transform .08s,background .08s;
-  }
-  .pgrid .g-digit.hot{background:var(--blue);color:var(--blue-ink);transform:scale(1.08)}
-  .pgrid .g-digit.done{opacity:.35}
-  .picker.mode-grid .halo,
-  .picker.mode-grid .p-center,
-  .picker.mode-grid .p-digit{display:none}
-  .picker:not(.mode-grid) .pgrid{display:none}
-
   /* The gesture track stays under the finger while the picker is drawn elsewhere */
   .anchor{position:fixed;left:0;top:0;width:0;height:0;display:none;z-index:14;pointer-events:none}
   .anchor.show{display:block}
@@ -360,16 +337,6 @@
     border:2px dashed var(--line);
     opacity:.85;
   }
-  .anchor .a-grid{
-    position:absolute;left:50%;top:50%;
-    width:156px;height:156px;
-    margin:-156px 0 0 -78px;
-    border-radius:14px;
-    border:2px dashed var(--line);
-    opacity:.85;
-  }
-  .anchor.grid .a-ring{display:none}
-  .anchor:not(.grid) .a-grid{display:none}
   .anchor .a-dot{
     position:absolute;left:50%;top:50%;
     width:20px;height:20px;border-radius:50%;
@@ -553,10 +520,10 @@
         <button data-theme="dark">Ciemny</button>
       </div>
     </div>
-    <div class="field">Wybór cyfr przytrzymaniem pola
+    <div class="field">Wpisywanie cyfr na telefonie
       <div class="seg two" id="inputSeg">
-        <button data-input="dial">Koło</button>
-        <button data-input="grid">Siatka 3×3</button>
+        <button data-input="dial">Koło pod palcem</button>
+        <button data-input="grid">Siatka pod planszą</button>
       </div>
     </div>
     <label class="switch">Długa strona — przewiń planszę pod kciuk
@@ -734,6 +701,8 @@ const darkMQ=matchMedia("(prefers-color-scheme: dark)");
 function isDark(){ return settings.theme==="dark" || (settings.theme==="system" && darkMQ.matches); }
 function applyInputMode(){
   document.querySelectorAll("#inputSeg button").forEach(b=>b.classList.toggle("active",b.dataset.input===settings.input));
+  document.body.classList.toggle("input-grid",settings.input==="grid");
+  if(S) refresh();
 }
 function applyTheme(){
   const root=document.documentElement;
@@ -1062,9 +1031,9 @@ function confetti(){
 }
 
 /* ============================== Radial digit picker ============================== */
-const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64, VIS_RADIUS=84, GRID_STEP=52;
+const LONG_MS=300, MOVE_TOL=10, DEAD=22, RADIUS=64, VIS_RADIUS=84;
 const press={timer:null, idx:-1, x:0, y:0, pid:null, active:false, digit:0, cx:0, cy:0, el:null};
-let pDigits=[], gDigits=[];
+let pDigits=[];
 
 function initPicker(){
   const pk=$("picker");
@@ -1079,17 +1048,7 @@ function initPicker(){
     pk.appendChild(el);
     pDigits.push(el);
   }
-  const grid=document.createElement("div");
-  grid.className="pgrid";
-  for(let d=1;d<=9;d++){
-    const el=document.createElement("div");
-    el.className="g-digit";
-    el.textContent=d;
-    grid.appendChild(el);
-    gDigits.push(el);
-  }
-  pk.appendChild(grid);
-  $("anchor").innerHTML='<div class="a-ring"></div><div class="a-grid"></div><div class="a-dot"></div>';
+  $("anchor").innerHTML='<div class="a-ring"></div><div class="a-dot"></div>';
   const board=$("board");
   board.addEventListener("contextmenu",e=>e.preventDefault());
   // The board owns single-finger touch gestures: it scrolls the page itself
@@ -1129,6 +1088,7 @@ function initPicker(){
     cancelPress();
     const i=cells.indexOf(cell);
     if(locked()||S.puzzle[i]) return;
+    if(settings.input==="grid") return;   // the fixed numpad handles input instead
     press.idx=i; press.x=e.clientX; press.y=e.clientY; press.pid=e.pointerId; press.el=cell;
     press.timer=setTimeout(()=>openPicker(i,cell,e.pointerId),LONG_MS);
   });
@@ -1161,19 +1121,15 @@ function openPicker(i,cell,pid){
   press.active=true; press.digit=0; press.pid=pid;
   const counts=new Array(10).fill(0);
   for(let k=0;k<81;k++) if(S.board[k]) counts[S.board[k]]++;
-  const gridMode=settings.input==="grid";
-  for(const list of [pDigits,gDigits])
-    list.forEach((el,k)=>{ el.classList.toggle("done",counts[k+1]>=9); el.classList.remove("hot"); });
+  pDigits.forEach((el,k)=>{ el.classList.toggle("done",counts[k+1]>=9); el.classList.remove("hot"); });
   const spot=pickerSpot(press.cx,press.cy);
   const pk=$("picker");
-  pk.classList.toggle("mode-grid",gridMode);
   pk.style.left=spot.x+"px"; pk.style.top=spot.y+"px";
   const c=pk.querySelector(".p-center");
   c.textContent=""; c.classList.remove("on");
   pk.classList.add("show");
   const an=$("anchor");
   an.style.left=press.cx+"px"; an.style.top=press.cy+"px";
-  an.classList.toggle("grid",gridMode);
   an.classList.add("show"); an.classList.remove("on");
   try{ cell.setPointerCapture(pid); }catch(e){}
   if(navigator.vibrate) navigator.vibrate(12);
@@ -1191,29 +1147,15 @@ function pickerSpot(fx,fy){
   }
   return best;
 }
-// Grid mode: the 3x3 track sits just above the finger, so releasing
-// without moving lands outside it and cancels.
-function gridPick(dx,dy){
-  if(dy>-12) return null;
-  const col=Math.floor((dx+1.5*GRID_STEP)/GRID_STEP);
-  const row=Math.floor((dy+3*GRID_STEP)/GRID_STEP);
-  if(col<0||col>2||row<0||row>2) return null;
-  return {d:row*3+col+1, x:(col-1)*GRID_STEP, y:(row-2.5)*GRID_STEP};
-}
 function updatePicker(x,y){
   const dx=x-press.cx, dy=y-press.cy;
   let d=0, ax=0, ay=0, aimed=false;
-  if(settings.input==="grid"){
-    const g=gridPick(dx,dy);
-    if(g){ d=g.d; ax=g.x; ay=g.y; aimed=true; }
-  }else{
-    const dist=Math.hypot(dx,dy);
-    if(dist>=DEAD){
-      const deg=(Math.atan2(dy,dx)*180/Math.PI+90+20+720)%360;
-      d=Math.min(9,Math.floor(deg/40)+1);
-      const ang=Math.atan2(dy,dx);
-      ax=RADIUS*Math.cos(ang); ay=RADIUS*Math.sin(ang); aimed=true;
-    }
+  const dist=Math.hypot(dx,dy);
+  if(dist>=DEAD){
+    const deg=(Math.atan2(dy,dx)*180/Math.PI+90+20+720)%360;
+    d=Math.min(9,Math.floor(deg/40)+1);
+    const ang=Math.atan2(dy,dx);
+    ax=RADIUS*Math.cos(ang); ay=RADIUS*Math.sin(ang); aimed=true;
   }
   const an=$("anchor");
   if(aimed){
@@ -1227,7 +1169,6 @@ function updatePicker(x,y){
   if(d!==press.digit){
     press.digit=d;
     pDigits.forEach((el,k)=>el.classList.toggle("hot",k+1===d));
-    gDigits.forEach((el,k)=>el.classList.toggle("hot",k+1===d));
     const c=$("picker").querySelector(".p-center");
     c.textContent=d?String(d):"";
     c.classList.toggle("on",!!d);
@@ -1238,7 +1179,7 @@ function closePicker(){
   if(!press.active) return;
   press.active=false; press.digit=0;
   $("picker").classList.remove("show");
-  $("anchor").classList.remove("show","on","grid");
+  $("anchor").classList.remove("show","on");
   try{ press.el && press.el.releasePointerCapture(press.pid); }catch(e){}
 }
 
@@ -1261,7 +1202,7 @@ function init(){
   }
 
   initPicker();
-  if(matchMedia("(hover:none)").matches && !localStorage.getItem("sudokuIndygo.tip")){
+  if(settings.input!=="grid" && matchMedia("(hover:none)").matches && !localStorage.getItem("sudokuIndygo.tip")){
     try{ localStorage.setItem("sudokuIndygo.tip","1"); }catch(e){}
     setTimeout(()=>toast("Przytrzymaj pole, aby wybrać cyfrę"),900);
   }
@@ -1281,6 +1222,7 @@ function init(){
   applyInputMode();
   document.querySelectorAll("#inputSeg button").forEach(b=>b.addEventListener("click",()=>{
     settings.input=b.dataset.input; saveSettings(); applyInputMode();
+    applyLongPage(false);   // re-park the game now that the dock changed height
   }));
   $("themeBtn").addEventListener("click",()=>{ settings.theme=isDark()?"light":"dark"; saveSettings(); applyTheme(); });
   document.querySelectorAll("#themeSeg button").forEach(b=>b.addEventListener("click",()=>{ settings.theme=b.dataset.theme; saveSettings(); applyTheme(); }));
