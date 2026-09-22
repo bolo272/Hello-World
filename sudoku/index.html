@@ -669,16 +669,24 @@ let S=null;            // {diff,puzzle,solution,board,notes,mistakes,done,over}
 let sel=-1, notesMode=false;
 let undoStack=[], redoStack=[];
 let settings={errors:true, same:true, clean:true, theme:"system", longpage:true};
-const KEY_SCROLL="sudokuIndygo.scroll.v1";
+const KEY_SCROLL="sudokuIndygo.scroll.v2";
 const mobileMQ=matchMedia("(max-width:860px)");
+// Park the board and its dock against the bottom edge, within thumb reach.
+function restingScrollY(){
+  const dock=document.querySelector(".dock");
+  const maxY=Math.max(0, document.documentElement.scrollHeight-innerHeight);
+  const bottom=dock.getBoundingClientRect().bottom+window.scrollY;
+  return Math.min(Math.max(0, Math.round(bottom-innerHeight+12)), maxY);
+}
 function applyLongPage(initial){
   const on=!!settings.longpage && mobileMQ.matches;
   document.body.classList.toggle("longpage",on);
   if(!on){ if(!initial) window.scrollTo(0,0); return; }
-  const pad=document.querySelector(".scroll-pad").offsetHeight;
   let y=initial ? Number(localStorage.getItem(KEY_SCROLL)) : NaN;
-  if(!Number.isFinite(y)||y<=0) y=pad;
-  requestAnimationFrame(()=>window.scrollTo(0,y));
+  requestAnimationFrame(()=>{
+    if(!Number.isFinite(y)||y<=0) y=restingScrollY();
+    window.scrollTo(0,y);
+  });
 }
 const darkMQ=matchMedia("(prefers-color-scheme: dark)");
 function isDark(){ return settings.theme==="dark" || (settings.theme==="system" && darkMQ.matches); }
@@ -1113,13 +1121,14 @@ function openPicker(i,cell,pid){
 }
 function pickerSpot(fx,fy){
   const vw=innerWidth, vh=innerHeight, M=VIS_RADIUS+42;  // halo radius + breathing room
-  const cands=[{x:vw/2,y:M},{x:vw/2,y:vh-M},{x:M,y:vh/2},{x:vw-M,y:vh/2}];
+  const fit=c=>({x:Math.min(Math.max(c.x,M),Math.max(M,vw-M)), y:Math.min(Math.max(c.y,M),Math.max(M,vh-M))});
+  // Top of the screen by default; the board normally rests well below it.
+  const top=fit({x:vw/2, y:M});
+  if(Math.hypot(top.x-fx,top.y-fy)>=VIS_RADIUS+80) return top;
   let best=null, bd=-1;
-  for(const c of cands){
-    c.x=Math.min(Math.max(c.x,M),Math.max(M,vw-M));
-    c.y=Math.min(Math.max(c.y,M),Math.max(M,vh-M));
-    const d=Math.hypot(c.x-fx,c.y-fy);
-    if(d>bd){ bd=d; best=c; }
+  for(const c of [{x:vw/2,y:vh-M},{x:M,y:vh/2},{x:vw-M,y:vh/2}]){
+    const f=fit(c), d=Math.hypot(f.x-fx,f.y-fy);
+    if(d>bd){ bd=d; best=f; }
   }
   return best;
 }
