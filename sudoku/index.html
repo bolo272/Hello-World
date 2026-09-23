@@ -283,10 +283,24 @@
     .tool{font-size:12px}
     .tool .ring{width:56px;height:56px}
     .numpad,.dock .primary,.hint-line{display:none}
-    body.input-grid .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:12px auto 0}
-    body.input-grid .num{height:auto;min-height:62px;font-size:32px;border-radius:12px}
-    body.input-row .numpad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;margin:12px auto 0}
-    body.input-row .num{height:auto;min-height:56px;font-size:23px;border-radius:9px}
+
+    /* Compact 3x3 keypad parked in the thumb's corner, tools stacked beside it */
+    body.input-grid .dock{
+      display:grid;
+      grid-template-columns:auto minmax(0,210px);
+      justify-content:space-between;align-items:end;gap:12px;
+    }
+    body.input-grid .tools{grid-template-columns:1fr;gap:6px;max-width:none;margin:0}
+    body.input-grid .tool{flex-direction:row;justify-content:flex-start;gap:9px;font-size:12px;padding:0}
+    body.input-grid .tool .ring{width:42px;height:42px}
+    body.input-grid .tool svg{width:19px;height:19px}
+    body.input-grid .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0}
+    body.input-grid .num{height:auto;min-height:54px;font-size:25px;border-radius:11px}
+
+    /* Row of digits sits straight under the board, tools below it */
+    body.input-row .dock{display:flex;flex-direction:column;gap:12px}
+    body.input-row .numpad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;margin:0;order:-1}
+    body.input-row .num{height:auto;min-height:54px;font-size:23px;border-radius:9px}
   }
 
   /* ---------- Radial digit picker ---------- */
