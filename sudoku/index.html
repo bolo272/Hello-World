@@ -209,7 +209,7 @@
 
   /* ---------- Controls ---------- */
   .dock{display:flex;flex-direction:column;gap:18px}
-  .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .tool{
     display:flex;flex-direction:column;align-items:center;gap:6px;
     font-size:12px;font-weight:500;color:var(--muted);
@@ -281,9 +281,9 @@
       background:var(--bg);
       display:block;
     }
-    .tools{grid-template-columns:repeat(4,1fr);gap:6px;max-width:380px;margin:0 auto}
-    .tool{font-size:11px}
-    .tool .ring{width:52px;height:52px}
+    .tools{grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:0 auto}
+    .tool{font-size:12px}
+    .tool .ring{width:56px;height:56px}
     .numpad,.dock .primary,.hint-line{display:none}
 
     /* Compact 3x3 keypad parked in the thumb's corner, tools stacked beside it */
@@ -405,6 +405,8 @@
     transition:background .15s;
   }
   .diff-btn:hover{background:var(--blue-soft)}
+  .diff-btn:disabled{opacity:.45;cursor:default}
+  .diff-btn:disabled:hover{background:var(--surface-2)}
   .diff-btn small{font-weight:400;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
   .ghost{color:var(--muted);font-size:14px;font-weight:600;padding:8px}
   .ghost:hover{color:var(--text)}
@@ -478,10 +480,6 @@
         <button class="tool" id="undoBtn" title="Cofnij (Ctrl+Z)">
           <span class="ring"><svg viewBox="0 0 24 24"><path d="M8 5 3 10l5 5"/><path d="M3 10h11a6 6 0 0 1 0 12h-4"/></svg></span>
           Cofnij
-        </button>
-        <button class="tool" id="rewindBtn" title="Wróć do ostatniej poprawnie wpisanej cyfry (R)">
-          <span class="ring"><svg viewBox="0 0 24 24"><path d="M3.2 11a9 9 0 1 1 2.3 7"/><path d="M3 4v5h5"/><path d="M12 7.5V12l3 2"/></svg></span>
-          Wróć
         </button>
         <button class="tool" id="eraseBtn" title="Wyczyść (Backspace)">
           <span class="ring"><svg viewBox="0 0 24 24"><path d="m14 4 7 7-9 9H7l-4-4 11-12z"/><path d="m9 9 7 7"/></svg></span>
@@ -567,6 +565,10 @@
     <label class="switch">Długa strona — przewiń planszę pod kciuk
       <input type="checkbox" id="setLong" checked><span class="knob"></span>
     </label>
+    <button class="diff-btn" id="rewindBtn" title="Klawisz R">
+      Wróć do ostatniej poprawnej cyfry
+      <small id="rewindNote">brak</small>
+    </button>
     <button class="ghost" id="closeSettings">Zamknij</button>
   </div>
 </div>
@@ -855,6 +857,7 @@ function refresh(){
   $("notesBtn").setAttribute("aria-pressed",String(notesMode));
   $("undoBtn").disabled=!undoStack.length;
   $("rewindBtn").disabled=!S.check;
+  $("rewindNote").textContent=S.check?"klawisz R":"brak zapisanego miejsca";
 }
 function c3(i){ const c=i%9; return c===2||c===5; }
 function r3(i){ const r=Math.floor(i/9); return r===2||r===5; }
@@ -1266,7 +1269,7 @@ function init(){
 
   $("undoBtn").addEventListener("click",undo);
   $("eraseBtn").addEventListener("click",eraseCell);
-  $("rewindBtn").addEventListener("click",rewind);
+  $("rewindBtn").addEventListener("click",()=>{ hideModals(); rewind(); });
   $("notesBtn").addEventListener("click",()=>{ notesMode=!notesMode; refresh(); });
   $("flipBtn").addEventListener("click",()=>{
     settings.handed = settings.handed==="left" ? "right" : "left";
