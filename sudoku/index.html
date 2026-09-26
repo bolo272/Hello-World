@@ -856,8 +856,10 @@ function refresh(){
   $("notesBtn").classList.toggle("active",notesMode);
   $("notesBtn").setAttribute("aria-pressed",String(notesMode));
   $("undoBtn").disabled=!undoStack.length;
-  $("rewindBtn").disabled=!S.check;
-  $("rewindNote").textContent=S.check?"klawisz R":"brak zapisanego miejsca";
+  const wrong=wrongCount();
+  $("rewindBtn").disabled=!wrong;
+  $("rewindNote").textContent = !wrong ? "plansza bez błędów"
+    : (settings.errors ? plCyfry(wrong) : "klawisz R");
 }
 function c3(i){ const c=i%9; return c===2||c===5; }
 function r3(i){ const r=Math.floor(i/9); return r===2||r===5; }
@@ -902,7 +904,6 @@ function inputDigit(d){
       if(settings.clean) for(const p of PEERS[sel]) S.notes[p]&=~(1<<d);
       const correct = d===S.solution[sel];
       if(correct){
-        S.check={b:[...S.board], n:[...S.notes]};   // a spot to come back to
         flashCompletedUnits(sel);
       }else if(settings.errors){
         S.mistakes++;
@@ -920,14 +921,28 @@ function inputDigit(d){
   checkWin();
 }
 
-// Roll the board back to how it stood right after the last correct digit.
+// Take the board back to its last fully correct state: every digit that
+// disagrees with the solution goes, no matter when it was entered.
+function wrongCount(){
+  if(!S) return 0;
+  let n=0;
+  for(let i=0;i<81;i++) if(!S.puzzle[i] && S.board[i] && S.board[i]!==S.solution[i]) n++;
+  return n;
+}
+function plCyfry(n){
+  if(n===1) return "1 błędną cyfrę";
+  const t=n%10, h=n%100;
+  return n+((t>=2&&t<=4&&!(h>=12&&h<=14)) ? " błędne cyfry" : " błędnych cyfr");
+}
 function rewind(){
-  if(locked()||!S.check) return;
+  if(locked()) return;
+  const n=wrongCount();
+  if(!n){ toast("Na planszy nie ma błędnych cyfr"); return; }
   snapshot();
-  S.board=[...S.check.b]; S.notes=[...S.check.n];
+  for(let i=0;i<81;i++) if(!S.puzzle[i] && S.board[i] && S.board[i]!==S.solution[i]) S.board[i]=0;
   sel=-1;
   refresh(); saveState();
-  toast("Wrócono do ostatniej poprawnej cyfry");
+  toast("Usunięto "+plCyfry(n));
 }
 
 function eraseCell(){
@@ -983,7 +998,7 @@ function startGame(diffKey){
       diff:diffKey, puzzle, solution,
       board:[...puzzle],
       notes:new Array(81).fill(0),
-      mistakes:0, done:false, over:false, check:null
+      mistakes:0, done:false, over:false
     };
     sel=-1; notesMode=false;
     undoStack=[]; redoStack=[];
@@ -995,7 +1010,7 @@ function restartPuzzle(){
   if(!S) return;
   S.board=[...S.puzzle];
   S.notes=new Array(81).fill(0);
-  S.mistakes=0; S.done=false; S.over=false; S.check=null;
+  S.mistakes=0; S.done=false; S.over=false;
   sel=-1; notesMode=false;
   undoStack=[]; redoStack=[];
   hideModals();
