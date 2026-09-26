@@ -890,9 +890,10 @@ function inputDigit(d){
     }else{
       S.board[sel]=d;
       S.notes[sel]=0;
+      // Every entered digit wipes that pencil mark from the cells that see it.
+      if(settings.clean) for(const p of PEERS[sel]) S.notes[p]&=~(1<<d);
       const correct = d===S.solution[sel];
       if(correct){
-        if(settings.clean) for(const p of PEERS[sel]) S.notes[p]&=~(1<<d);
         flashCompletedUnits(sel);
       }else if(settings.errors){
         S.mistakes++;
