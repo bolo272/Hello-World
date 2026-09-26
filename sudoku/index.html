@@ -262,6 +262,8 @@
   .primary:hover{filter:brightness(1.08)}
   .primary:active{transform:scale(.98)}
   .hint-line{font-size:12px;color:var(--muted);text-align:center;margin:0}
+  .flip{display:none}
+  .flip svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .scroll-pad{display:none}
 
   /* ---------- Mobile: one-hand dock ---------- */
@@ -296,6 +298,18 @@
     body.input-grid .tool svg{width:19px;height:19px}
     body.input-grid .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0}
     body.input-grid .num{height:auto;min-height:54px;font-size:25px;border-radius:11px}
+    body.input-grid .flip{
+      display:grid;place-items:center;
+      grid-column:2;grid-row:2;justify-self:center;
+      width:36px;height:36px;border-radius:50%;
+      margin-top:6px;
+      background:var(--surface-2);color:var(--muted);
+    }
+    body.input-grid .flip:active{transform:scale(.94)}
+    body.input-grid.hand-left .dock{grid-template-columns:minmax(0,210px) auto}
+    body.input-grid.hand-left .numpad{order:-1}
+    body.input-grid.hand-left .tool{flex-direction:row-reverse;justify-content:flex-end}
+    body.input-grid.hand-left .flip{grid-column:1}
 
     /* Row of digits sits straight under the board, tools below it */
     body.input-row .dock{display:flex;flex-direction:column;gap:12px}
@@ -475,6 +489,9 @@
         </button>
       </div>
       <div class="numpad" id="numpad"></div>
+      <button class="flip" id="flipBtn" aria-label="Przenieś klawiaturę na drugą stronę" title="Zamień strony">
+        <svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>
+      </button>
       <button class="primary" id="newGameBtn">Nowa gra</button>
       <p class="hint-line">Strzałki · 1–9 · N notatki · Ctrl+Z · przytrzymaj pole, by wybrać cyfrę</p>
     </aside>
@@ -692,9 +709,9 @@ function makePuzzle(diffKey){
 
 /* ============================== State ============================== */
 let S=null;            // {diff,puzzle,solution,board,notes,mistakes,done,over}
-let sel=-1, notesMode=false;
+let sel=-1, notesMode=false, pickerClosedAt=0;
 let undoStack=[], redoStack=[];
-let settings={errors:true, same:true, clean:true, theme:"system", longpage:true, input:"dial"};
+let settings={errors:true, same:true, clean:true, theme:"system", longpage:true, input:"dial", handed:"right"};
 const KEY_SCROLL="sudokuIndygo.scroll.v2";
 const mobileMQ=matchMedia("(max-width:860px)");
 // Park the board and its dock against the bottom edge, within thumb reach.
@@ -720,6 +737,7 @@ function applyInputMode(){
   document.querySelectorAll("#inputSeg button").forEach(b=>b.classList.toggle("active",b.dataset.input===settings.input));
   document.body.classList.toggle("input-grid",settings.input==="grid");
   document.body.classList.toggle("input-row",settings.input==="row");
+  document.body.classList.toggle("hand-left",settings.handed==="left");
   if(S) refresh();
 }
 function applyTheme(){
@@ -748,7 +766,11 @@ function buildBoard(){
     if(c===2||c===5) el.classList.add("bR");
     if(r===2||r===5) el.classList.add("bB");
     el.setAttribute("aria-label","Wiersz "+(r+1)+", kolumna "+(c+1));
-    el.addEventListener("click",()=>selectCell(i));
+    el.addEventListener("click",()=>{
+      // A dial gesture ends without a click of its own, so ignore the stray one that may follow.
+      if(Date.now()-pickerClosedAt<350) return;
+      selectCell(sel===i ? -1 : i);   // tapping the lit cell again clears the highlight
+    });
     board.appendChild(el);
     cells.push(el);
   }
@@ -1195,7 +1217,7 @@ function updatePicker(x,y){
 }
 function closePicker(){
   if(!press.active) return;
-  press.active=false; press.digit=0;
+  press.active=false; press.digit=0; pickerClosedAt=Date.now();
   $("picker").classList.remove("show");
   $("anchor").classList.remove("show","on");
   try{ press.el && press.el.releasePointerCapture(press.pid); }catch(e){}
@@ -1228,6 +1250,10 @@ function init(){
   $("undoBtn").addEventListener("click",undo);
   $("eraseBtn").addEventListener("click",eraseCell);
   $("notesBtn").addEventListener("click",()=>{ notesMode=!notesMode; refresh(); });
+  $("flipBtn").addEventListener("click",()=>{
+    settings.handed = settings.handed==="left" ? "right" : "left";
+    saveSettings(); applyInputMode();
+  });
 
   $("newGameBtn").addEventListener("click",()=>{ buildDiffList($("newDiffs")); $("newModal").classList.add("show"); });
   $("cancelNew").addEventListener("click",hideModals);
