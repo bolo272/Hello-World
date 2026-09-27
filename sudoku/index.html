@@ -27,6 +27,10 @@
     --same-bg:#C3D7EA;
     --sel-bg:#BBDEFB;
     --flash:#D6E6F7;
+    --hint:#D9932B;
+    --hint-bg:#FAE7C8;
+    --hint-soft:#FDF4E6;
+    --hint-ink:#8A5A12;
     --shadow:0 6px 24px rgba(52,72,97,.12);
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   }
@@ -48,6 +52,10 @@
       --same-bg:#2B3C55;
       --sel-bg:#2F4A73;
       --flash:#2A3B57;
+    --hint:#E8B86A;
+    --hint-bg:#3C2F1A;
+    --hint-soft:#2A2318;
+    --hint-ink:#F0CE96;
       --shadow:0 6px 24px rgba(0,0,0,.4);
     }
   }
@@ -68,6 +76,10 @@
     --same-bg:#2B3C55;
     --sel-bg:#2F4A73;
     --flash:#2A3B57;
+    --hint:#E8B86A;
+    --hint-bg:#3C2F1A;
+    --hint-soft:#2A2318;
+    --hint-ink:#F0CE96;
     --shadow:0 6px 24px rgba(0,0,0,.4);
   }
 
@@ -176,6 +188,9 @@
   .cell.error{color:var(--error)}
   .cell.error.user{background:var(--error-bg)}
   .cell.sel{background:var(--sel-bg)}
+  .cell.hint-soft{background:var(--hint-soft)}
+  .cell.hint-x{background:var(--hint-bg);box-shadow:inset 0 0 0 2px var(--hint)}
+  .cell.hint-main{background:var(--hint-bg);box-shadow:inset 0 0 0 3px var(--hint)}
   @media (hover:hover){ .cell:not(.sel):hover{background:var(--same-bg)} }
   .notes{
     display:grid;
@@ -431,6 +446,32 @@
   .switch input:checked + .knob::after{transform:translateX(16px)}
   .switch input:focus-visible + .knob{outline:2px solid var(--blue);outline-offset:2px}
 
+  .hintcard{
+    position:fixed;left:50%;top:12px;
+    transform:translateX(-50%) translateY(-10px);
+    width:min(92vw,370px);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:14px 16px 14px;
+    z-index:18;opacity:0;pointer-events:none;visibility:hidden;
+    transition:opacity .18s,transform .18s,visibility .18s;
+    text-align:left;
+  }
+  .hintcard.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;visibility:visible}
+  .hintcard h3{margin:6px 0 6px;font-size:17px;font-weight:700;text-wrap:balance}
+  .hintcard p{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .hc-tag{
+    display:inline-block;
+    font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--hint-ink);background:var(--hint-bg);
+    padding:4px 9px;border-radius:999px;
+  }
+  .hc-actions{display:flex;gap:8px;align-items:stretch}
+  .hc-actions .primary{flex:1;height:42px;font-size:14px;box-shadow:none}
+  .hc-actions .ghost{padding:0 14px}
+
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
   .toast{
     position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
@@ -452,6 +493,9 @@
   <header>
     <div class="wordmark">Sudoku <small>Indygo</small></div>
     <div class="hdr-actions">
+    <button class="icon-btn" id="hintBtn" aria-label="Podpowiedź" title="Podpowiedź z wyjaśnieniem (H)">
+      <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10c.7.7 1.3 1.6 1.5 2.5h5c.2-.9.8-1.8 1.5-2.5A6 6 0 0 0 12 3z"/></svg>
+    </button>
     <button class="icon-btn" id="themeBtn" aria-label="Przełącz motyw" title="Motyw jasny / ciemny">
       <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -495,7 +539,7 @@
         <svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>
       </button>
       <button class="primary" id="newGameBtn">Nowa gra</button>
-      <p class="hint-line">Strzałki · 1–9 · N notatki · R powrót · Ctrl+Z · przytrzymaj pole, by wybrać cyfrę</p>
+      <p class="hint-line">Strzałki · 1–9 · N notatki · H podpowiedź · R powrót · Ctrl+Z</p>
     </aside>
     <div class="scroll-pad" aria-hidden="true"></div>
   </main>
@@ -573,6 +617,15 @@
   </div>
 </div>
 
+<div class="hintcard" id="hintCard" role="dialog" aria-live="polite">
+  <span class="hc-tag" id="hintTag"></span>
+  <h3 id="hintTitle"></h3>
+  <p id="hintText"></p>
+  <div class="hc-actions">
+    <button class="primary" id="hintApply">Zastosuj</button>
+    <button class="ghost" id="hintClose">Zamknij</button>
+  </div>
+</div>
 <div class="anchor" id="anchor" aria-hidden="true"></div>
 <div class="picker" id="picker" aria-hidden="true"></div>
 <canvas id="confetti"></canvas>
@@ -856,6 +909,11 @@ function refresh(){
   $("notesBtn").classList.toggle("active",notesMode);
   $("notesBtn").setAttribute("aria-pressed",String(notesMode));
   $("undoBtn").disabled=!undoStack.length;
+  if(hintView){
+    for(const i of hintView.soft) cells[i].classList.add("hint-soft");
+    for(const i of hintView.targets) cells[i].classList.add("hint-x");
+    if(hintView.cell>=0) cells[hintView.cell].classList.add("hint-main");
+  }
   const wrong=wrongCount();
   $("rewindBtn").disabled=!wrong;
   $("rewindNote").textContent = !wrong ? "plansza bez błędów"
@@ -873,6 +931,7 @@ function snapshot(){
 }
 function undo(){
   if(!undoStack.length||locked()) return;
+  closeHint();
   redoStack.push({b:[...S.board], n:[...S.notes]});
   const p=undoStack.pop();
   S.board=p.b; S.notes=p.n;
@@ -880,6 +939,7 @@ function undo(){
 }
 function redo(){
   if(!redoStack.length||locked()) return;
+  closeHint();
   undoStack.push({b:[...S.board], n:[...S.notes]});
   const p=redoStack.pop();
   S.board=p.b; S.notes=p.n;
@@ -889,6 +949,7 @@ function redo(){
 function inputDigit(d){
   if(locked()) return;
   if(sel<0){ toast("Najpierw wybierz pole"); return; }
+  closeHint();
   if(S.puzzle[sel]) return;
   if(notesMode && S.board[sel]) return;
   snapshot();
@@ -949,6 +1010,7 @@ function eraseCell(){
   if(locked()) return;
   if(sel<0||S.puzzle[sel]) return;
   if(!S.board[sel]&&!S.notes[sel]) return;
+  closeHint();
   snapshot();
   S.board[sel]=0; S.notes[sel]=0;
   refresh(); saveState();
@@ -990,7 +1052,7 @@ function requestNewGame(diffKey){
 }
 function startGame(diffKey){
   $("genOverlay").classList.add("show");
-  closePicker();
+  closePicker(); closeHint();
   hideModals();
   setTimeout(()=>{
     const {puzzle,solution}=makePuzzle(diffKey);
@@ -998,7 +1060,7 @@ function startGame(diffKey){
       diff:diffKey, puzzle, solution,
       board:[...puzzle],
       notes:new Array(81).fill(0),
-      mistakes:0, done:false, over:false
+      mistakes:0, done:false, over:false, elim:new Array(81).fill(0)
     };
     sel=-1; notesMode=false;
     undoStack=[]; redoStack=[];
@@ -1010,7 +1072,7 @@ function restartPuzzle(){
   if(!S) return;
   S.board=[...S.puzzle];
   S.notes=new Array(81).fill(0);
-  S.mistakes=0; S.done=false; S.over=false;
+  S.mistakes=0; S.done=false; S.over=false; S.elim=new Array(81).fill(0);
   sel=-1; notesMode=false;
   undoStack=[]; redoStack=[];
   hideModals();
@@ -1258,6 +1320,250 @@ function closePicker(){
   try{ press.el && press.el.releasePointerCapture(press.pid); }catch(e){}
 }
 
+/* ===================== Hints that explain the technique ===================== */
+let hintView=null;
+function unitName(u){ return u<9 ? "wiersz "+(u+1) : u<18 ? "kolumna "+(u-8) : "kwadrat 3×3"; }
+function boxOf(i){ return 18+Math.floor(Math.floor(i/9)/3)*3+Math.floor((i%9)/3); }
+function calcCands(){
+  if(!S.elim) S.elim=new Array(81).fill(0);
+  const c=new Array(81).fill(0);
+  for(let i=0;i<81;i++){
+    if(S.board[i]) continue;
+    let m=1022;
+    for(const p of PEERS[i]) if(S.board[p]) m&=~(1<<S.board[p]);
+    c[i]=m & ~S.elim[i];
+  }
+  return c;
+}
+function bits(m){ const a=[]; for(let d=1;d<=9;d++) if(m&(1<<d)) a.push(d); return a; }
+
+function findHint(){
+  const c=calcCands();
+
+  // 1. Naked single - one candidate left in a cell
+  for(let i=0;i<81;i++){
+    if(S.board[i]||pop(c[i])!==1) continue;
+    const d=bits(c[i])[0];
+    return {kind:"place",cell:i,digit:d,soft:PEERS[i].filter(p=>S.board[p]),targets:[],
+      tag:"Jedyny kandydat",
+      title:"W tym polu mieści się tylko "+d,
+      text:"Wszystkie pozostałe cyfry stoją już w wierszu, kolumnie albo kwadracie tego pola (jaśniejsze tło). Zostaje wyłącznie "+d+".",
+      applyLabel:"Wpisz "+d};
+  }
+
+  // 2. Hidden single - a digit fits only one cell of a unit
+  for(let u=0;u<27;u++){
+    for(let d=1;d<=9;d++){
+      let taken=false, spots=[];
+      for(const i of UNITS[u]){
+        if(S.board[i]===d){ taken=true; break; }
+        if(!S.board[i] && (c[i]&(1<<d))) spots.push(i);
+      }
+      if(taken||spots.length!==1) continue;
+      const i=spots[0];
+      return {kind:"place",cell:i,digit:d,soft:UNITS[u].filter(x=>x!==i),targets:[],
+        tag:"Jedyne miejsce",
+        title:"Cyfra "+d+" musi stanąć tutaj",
+        text:"W podświetlonym obszarze ("+unitName(u)+") cyfra "+d+" mieści się już tylko w tym jednym polu. W pozostałych pustych polach blokują ją cyfry z przecinających się wierszy, kolumn i kwadratów.",
+        applyLabel:"Wpisz "+d};
+    }
+  }
+
+  // 3. Pointing pair - candidates of a box confined to one line
+  for(let b=18;b<27;b++){
+    for(let d=1;d<=9;d++){
+      const spots=UNITS[b].filter(i=>!S.board[i]&&(c[i]&(1<<d)));
+      if(spots.length<2||spots.length>3) continue;
+      const rows=new Set(spots.map(i=>Math.floor(i/9))), cols=new Set(spots.map(i=>i%9));
+      let line=null, word="", where="";
+      if(rows.size===1){ const r=[...rows][0]; line=UNITS[r]; word="wierszu"; where="wiersz "+(r+1); }
+      else if(cols.size===1){ const k=[...cols][0]; line=UNITS[9+k]; word="kolumnie"; where="kolumna "+(k+1); }
+      if(!line) continue;
+      const elim=line.filter(i=>boxOf(i)!==b && !S.board[i] && (c[i]&(1<<d)));
+      if(!elim.length) continue;
+      return {kind:"elim",cell:-1,digit:d,soft:spots,targets:elim,
+        elim:elim.map(i=>({cell:i,digits:[d]})),
+        tag:"Para wskazująca",
+        title:"Cyfra "+d+" opuszcza resztę linii",
+        text:"W tym kwadracie cyfra "+d+" mieści się tylko w polach leżących w jednym "+word+" ("+where+", pola podświetlone). Gdziekolwiek tam stanie, zajmie ten "+word+", więc w polach obwiedzionych ramką cyfra "+d+" odpada.",
+        applyLabel:"Skreśl w notatkach"};
+    }
+  }
+
+  // 4. Box-line reduction - candidates of a line confined to one box
+  for(let u=0;u<18;u++){
+    for(let d=1;d<=9;d++){
+      const spots=UNITS[u].filter(i=>!S.board[i]&&(c[i]&(1<<d)));
+      if(spots.length<2||spots.length>3) continue;
+      const boxes=new Set(spots.map(boxOf));
+      if(boxes.size!==1) continue;
+      const b=[...boxes][0];
+      const inLine=new Set(UNITS[u]);
+      const elim=UNITS[b].filter(i=>!inLine.has(i) && !S.board[i] && (c[i]&(1<<d)));
+      if(!elim.length) continue;
+      return {kind:"elim",cell:-1,digit:d,soft:spots,targets:elim,
+        elim:elim.map(i=>({cell:i,digits:[d]})),
+        tag:"Blokada kwadratu",
+        title:"Cyfra "+d+" zostaje w tym kwadracie",
+        text:"W obszarze "+unitName(u)+" cyfra "+d+" mieści się wyłącznie w polach jednego kwadratu 3×3 (podświetlone). Skoro musi stanąć w tej linii, zajmie ten kwadrat, więc w pozostałych polach kwadratu (w ramce) "+d+" odpada.",
+        applyLabel:"Skreśl w notatkach"};
+    }
+  }
+
+  // 5. Naked pair - two cells sharing the same two candidates
+  for(let u=0;u<27;u++){
+    const open=UNITS[u].filter(i=>!S.board[i]);
+    for(let a=0;a<open.length;a++){
+      for(let b=a+1;b<open.length;b++){
+        const i=open[a], j=open[b];
+        if(pop(c[i])!==2||c[i]!==c[j]) continue;
+        const ds=bits(c[i]);
+        const elim=open.filter(k=>k!==i&&k!==j&&(c[k]&c[i]));
+        if(!elim.length) continue;
+        return {kind:"elim",cell:-1,soft:[i,j],targets:elim,
+          elim:elim.map(k=>({cell:k,digits:ds.filter(d=>c[k]&(1<<d))})),
+          tag:"Naga para",
+          title:"Cyfry "+ds[0]+" i "+ds[1]+" zajmą te dwa pola",
+          text:"W obszarze "+unitName(u)+" dwa podświetlone pola mieszczą wyłącznie "+ds[0]+" i "+ds[1]+". Rozdzielą je między siebie w dowolnej kolejności, więc w pozostałych polach tego obszaru (w ramce) obie cyfry odpadają.",
+          applyLabel:"Skreśl w notatkach"};
+      }
+    }
+  }
+
+  // 6. Hidden pair - two digits confined to the same two cells
+  for(let u=0;u<27;u++){
+    const open=UNITS[u].filter(i=>!S.board[i]);
+    const spotsFor={};
+    for(let d=1;d<=9;d++){
+      const sp=open.filter(i=>c[i]&(1<<d));
+      if(sp.length===2) spotsFor[d]=sp;
+    }
+    const ds=Object.keys(spotsFor).map(Number);
+    for(let a=0;a<ds.length;a++){
+      for(let b=a+1;b<ds.length;b++){
+        const d1=ds[a], d2=ds[b], s1=spotsFor[d1], s2=spotsFor[d2];
+        if(s1[0]!==s2[0]||s1[1]!==s2[1]) continue;
+        const keep=(1<<d1)|(1<<d2);
+        const extra=s1.filter(i=>c[i]&~keep&1022);
+        if(!extra.length) continue;
+        return {kind:"elim",cell:-1,soft:s1,targets:extra,
+          elim:extra.map(i=>({cell:i,digits:bits(c[i]&~keep&1022)})),
+          tag:"Ukryta para",
+          title:"Cyfry "+d1+" i "+d2+" mają tylko te dwa pola",
+          text:"W obszarze "+unitName(u)+" cyfry "+d1+" i "+d2+" mieszczą się wyłącznie w dwóch podświetlonych polach. Skoro obie muszą tu stanąć, zajmą właśnie te pola — wszystkie inne kandydatki z nich znikają.",
+          applyLabel:"Skreśl w notatkach"};
+      }
+    }
+  }
+
+  // 7. X-Wing - a rectangle of candidates across two lines
+  for(let d=1;d<=9;d++){
+    for(const dir of [0,1]){
+      const spots=[];
+      for(let L=0;L<9;L++){
+        const sp=UNITS[dir?9+L:L].filter(i=>!S.board[i]&&(c[i]&(1<<d)));
+        spots.push(sp.length===2?sp:null);
+      }
+      const key=i=>dir?Math.floor(i/9):i%9;
+      for(let a=0;a<9;a++){
+        if(!spots[a]) continue;
+        for(let b=a+1;b<9;b++){
+          if(!spots[b]) continue;
+          const p1=spots[a], p2=spots[b];
+          if(key(p1[0])!==key(p2[0])||key(p1[1])!==key(p2[1])) continue;
+          const k1=key(p1[0]), k2=key(p1[1]);
+          const corners=p1.concat(p2), elim=[];
+          for(const k of [k1,k2]){
+            for(const i of UNITS[dir?k:9+k]){
+              if(corners.includes(i)) continue;
+              if(!S.board[i]&&(c[i]&(1<<d))) elim.push(i);
+            }
+          }
+          if(!elim.length) continue;
+          const lineWord=dir?"kolumnach":"wierszach", crossWord=dir?"wierszach":"kolumnach";
+          return {kind:"elim",cell:-1,soft:corners,targets:elim,
+            elim:elim.map(i=>({cell:i,digits:[d]})),
+            tag:"X-Wing",
+            title:"Prostokąt blokuje cyfrę "+d,
+            text:"W dwóch "+lineWord+" ("+(a+1)+" i "+(b+1)+") cyfra "+d+" mieści się tylko w tych samych dwóch "+crossWord+" ("+(k1+1)+" i "+(k2+1)+"). Cztery podświetlone pola tworzą prostokąt, w którym "+d+" zajmie dwa przeciwległe rogi. W pozostałych polach tych "+crossWord+" (w ramce) cyfra "+d+" odpada.",
+            applyLabel:"Skreśl w notatkach"};
+        }
+      }
+    }
+  }
+
+  // Nothing simple left - fall back to the solution
+  const open=[];
+  for(let i=0;i<81;i++) if(!S.board[i]) open.push(i);
+  if(!open.length) return null;
+  const i=open[Math.floor(Math.random()*open.length)];
+  return {kind:"place",cell:i,digit:S.solution[i],soft:[],targets:[],
+    tag:"Bez prostej techniki",
+    title:"Tu potrzeba trudniejszego wnioskowania",
+    text:"Nie znalazłem ruchu wynikającego z podstawowych technik. Podpowiadam cyfrę z rozwiązania dla podświetlonego pola.",
+    applyLabel:"Wpisz "+S.solution[i]};
+}
+
+function showHint(){
+  if(locked()) return;
+  const w=wrongCount();
+  if(w){
+    hintView={kind:"fix",cell:-1,soft:[],targets:[],
+      tag:"Błędne cyfry",
+      title:"Najpierw popraw planszę",
+      text:"Na planszy stoją cyfry niezgodne z rozwiązaniem ("+w+"). Dopóki tam są, dalsze wnioskowanie prowadzi donikąd.",
+      applyLabel:"Usuń błędne cyfry"};
+  }else{
+    hintView=findHint();
+    if(!hintView){ toast("Plansza jest już rozwiązana"); return; }
+  }
+  $("hintTag").textContent=hintView.tag;
+  $("hintTitle").textContent=hintView.title;
+  $("hintText").textContent=hintView.text;
+  $("hintApply").textContent=hintView.applyLabel;
+  $("hintCard").classList.add("show");
+  if(hintView.cell>=0) sel=hintView.cell;
+  refresh();
+}
+
+function closeHint(){
+  if(!hintView) return;
+  hintView=null;
+  $("hintCard").classList.remove("show");
+  if(S) refresh();
+}
+
+function applyHint(){
+  if(!hintView) return;
+  const h=hintView;
+  if(h.kind==="fix"){ closeHint(); rewind(); return; }
+  if(h.kind==="place"){
+    snapshot();
+    S.board[h.cell]=h.digit;
+    S.notes[h.cell]=0;
+    if(settings.clean) for(const p of PEERS[h.cell]) S.notes[p]&=~(1<<h.digit);
+    S.hints=(S.hints||0)+1;
+    sel=h.cell;
+    closeHint();
+    popCell(h.cell);
+    flashCompletedUnits(h.cell);
+    refresh(); saveState(); checkWin();
+    return;
+  }
+  let changed=0;
+  for(const e of h.elim) for(const d of e.digits) if((S.notes[e.cell]>>d)&1) changed++;
+  if(changed){
+    snapshot();
+    for(const e of h.elim) for(const d of e.digits) S.notes[e.cell]&=~(1<<d);
+  }
+  if(!S.elim) S.elim=new Array(81).fill(0);
+  for(const e of h.elim) for(const d of e.digits) S.elim[e.cell]|=(1<<d);
+  closeHint();
+  refresh(); saveState();
+  toast(changed ? "Zapamiętano i skreślono w notatkach: "+changed
+                : "Zapamiętano — w tych polach nie masz jeszcze takich notatek");
+}
+
 /* ============================== Wiring ============================== */
 function init(){
   settings=Object.assign(settings, loadJSON(KEY_SET,{}));
@@ -1285,6 +1591,9 @@ function init(){
   $("undoBtn").addEventListener("click",undo);
   $("eraseBtn").addEventListener("click",eraseCell);
   $("rewindBtn").addEventListener("click",()=>{ hideModals(); rewind(); });
+  $("hintBtn").addEventListener("click",showHint);
+  $("hintApply").addEventListener("click",applyHint);
+  $("hintClose").addEventListener("click",closeHint);
   $("notesBtn").addEventListener("click",()=>{ notesMode=!notesMode; refresh(); });
   $("flipBtn").addEventListener("click",()=>{
     settings.handed = settings.handed==="left" ? "right" : "left";
@@ -1342,6 +1651,8 @@ function init(){
     if((e.ctrlKey||e.metaKey)&&(e.key==="y"||e.key==="Y")){ e.preventDefault(); redo(); return; }
     if(e.key==="n"||e.key==="N"){ notesMode=!notesMode; refresh(); return; }
     if(e.key==="r"||e.key==="R"){ rewind(); return; }
+    if(e.key==="h"||e.key==="H"){ showHint(); return; }
+    if(e.key==="Escape"){ closeHint(); return; }
     if(/^[1-9]$/.test(e.key)){ inputDigit(+e.key); return; }
     if(e.key==="Backspace"||e.key==="Delete"||e.key==="0"){ e.preventDefault(); eraseCell(); return; }
     const moves={ArrowUp:-9,ArrowDown:9,ArrowLeft:-1,ArrowRight:1};
