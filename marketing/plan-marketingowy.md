@@ -7,7 +7,7 @@
 | Zasięg | [miasto] + ok. 50 km |
 | Budżet | do 1 500 zł/mies. (reklamy + narzędzia) |
 | Co sprzedajemy | projekty niestandardowe; przeznaczenie drugorzędne, liczy się unikalność |
-| Punkt startu | aktywny Facebook/Instagram; brak strony, wizytówki Google z opiniami i stałej współpracy z architektami |
+| Punkt startu | aktywny Facebook/Instagram; brak zarejestrowanej działalności, domeny, strony, wizytówki Google z opiniami i stałej współpracy z architektami |
 
 Pliki obok: [`szablony.md`](szablony.md) (gotowe teksty, prompty, pola formularza, klauzula do umowy) i [`google-ads-slowa-kluczowe.csv`](google-ads-slowa-kluczowe.csv).
 
@@ -229,6 +229,12 @@ Od miesiąca 4 przesuwaj pieniądze do kanału, który daje **podpisane umowy**,
 ---
 
 ## 7. Plan na 90 dni
+
+**Tydzień 0: formalności**
+- [ ] Rejestracja działalności w CEIDG (online, bez opłat) z ulgą na start. Przy zleceniach po kilkanaście tysięcy złotych działalność nierejestrowana odpada: jej limit to 10 813,50 zł przychodu na kwartał (2026).
+- [ ] Domena: metalove.pl jest zajęta, sprawdź np. metalove-warszawa.pl albo pracowniametalove.pl
+- [ ] Adres kontakt@[domena] przekierowany na Gmaila (prywatnego adresu nie publikujemy)
+- [ ] Konto firmowe i program do faktur
 
 **Tydzień 1–2: fundamenty**
 - [ ] Wizytówka Google: założenie, weryfikacja, 30 zdjęć, usługi, „ceny od”
