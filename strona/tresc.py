@@ -12,10 +12,12 @@ FIRMA = dict(
     email=None,            # np. 'kontakt@metalove.pl'
     instagram=None,        # pełny link do profilu
     facebook=None,         # pełny link do strony
-    domena=None,           # np. 'https://metalove.pl'; potrzebna do mapy strony i podglądów linków
-    pelna_nazwa=None,      # pełna nazwa firmy do polityki prywatności
-    adres=None,            # adres firmy do polityki prywatności
-    nip=None,
+    domena=None,           # np. 'https://metalove-warszawa.pl'; potrzebna do mapy strony i podglądów linków
+    forma='nierejestrowana',  # 'nierejestrowana' (start bez firmy) albo 'firma' (po rejestracji w CEIDG)
+    imie_nazwisko=None,    # do polityki prywatności przy działalności nierejestrowanej
+    pelna_nazwa=None,      # przy formie 'firma': pełna nazwa z CEIDG
+    adres=None,            # przy formie 'firma': adres firmy
+    nip=None,              # przy formie 'firma'
     czas_odpowiedzi='48 godzin',  # obietnica z formularza wyceny; zmień, jeśli nie dacie rady
 )
 

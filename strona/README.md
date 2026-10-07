@@ -33,8 +33,8 @@ Nowa realizacja to nowy wpis w `REALIZACJE` w `tresc.py` i zdjęcie w `zdjecia/`
 W `tresc.py`, w słowniku `FIRMA`:
 
 - telefon, e-mail, Instagram, Facebook,
-- domena (np. `https://metalove.pl`), potrzebna do mapy strony i podglądu linków w social mediach,
-- pełna nazwa firmy, adres i NIP do polityki prywatności (treść polityki sprawdź z prawnikiem),
+- domena (metalove.pl jest zajęta; np. `https://metalove-warszawa.pl`), potrzebna do mapy strony i podglądu linków w social mediach,
+- dane do polityki prywatności (treść sprawdź z prawnikiem): przy starcie bez firmy (`forma='nierejestrowana'`) wystarczy imię i nazwisko; po rejestracji w CEIDG ustaw `forma='firma'` i wpisz pełną nazwę, adres i NIP,
 - `czas_odpowiedzi`: strona obiecuje odpowiedź w 48 godzin; zmień, jeśli to za krótko.
 
 W `REALIZACJE` możesz dopisać lokalizację (dzielnicę, bez adresu), rok i nazwisko projektanta. Pola puste nie pokazują się na stronie.

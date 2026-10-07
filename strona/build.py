@@ -665,17 +665,24 @@ def strona_projektantow():
 
 
 def strona_polityki():
-    wzor = '' if F['pelna_nazwa'] else '<p class="uwaga">To wzór. Przed publikacją uzupełnij dane firmy i sprawdź treść z prawnikiem.</p>'
-    admin = e(F['pelna_nazwa']) if F['pelna_nazwa'] else todo('pełna nazwa firmy')
-    adres = e(F['adres']) if F['adres'] else todo('adres')
-    nip = e(F['nip']) if F['nip'] else todo('NIP')
+    uwaga = '<p class="uwaga">To wzór. Przed publikacją uzupełnij dane i sprawdź treść z prawnikiem.</p>'
+    if F['forma'] == 'firma':
+        wzor = '' if F['pelna_nazwa'] else uwaga
+        admin = e(F['pelna_nazwa']) if F['pelna_nazwa'] else todo('pełna nazwa firmy')
+        adres = e(F['adres']) if F['adres'] else todo('adres')
+        nip = e(F['nip']) if F['nip'] else todo('NIP')
+        kto = f'{admin}, {adres}, NIP {nip}'
+    else:
+        wzor = '' if F['imie_nazwisko'] else uwaga
+        osoba = e(F['imie_nazwisko']) if F['imie_nazwisko'] else todo('imię i nazwisko')
+        kto = f'{osoba} (działalność nierejestrowana pod nazwą Metalove, {e(F["miasto"])})'
     tresc = f'''<section class="kontener strona-naglowek">
   <h1>Polityka prywatności</h1>
 </section>
 <section class="kontener tekst-strony">
   {wzor}
   <h2>Kto jest administratorem danych</h2>
-  <p>Administratorem danych osobowych jest {admin}, {adres}, NIP {nip}. Kontakt w sprawie danych: {email()}, {telefon()}.</p>
+  <p>Administratorem danych osobowych jest {kto}. Kontakt w sprawie danych: {email()}, {telefon()}.</p>
   <h2>Jakie dane zbieramy</h2>
   <p>Dane, które wpiszesz w formularzu: imię, telefon, adres e-mail, nazwę pracowni, opis projektu, miejscowość i przesłane pliki.</p>
   <h2>Po co i na jakiej podstawie</h2>
