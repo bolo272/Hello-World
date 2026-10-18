@@ -188,6 +188,20 @@
   .cell.error{color:var(--error)}
   .cell.error.user{background:var(--error-bg)}
   .cell.sel{background:var(--sel-bg)}
+  /* A pencilled-in digit: hollow, slanted and underlined, so it never reads as final */
+  .cell .dr{
+    font-size:.78em;font-style:italic;
+    color:var(--muted);
+    line-height:1.1;padding:0 3px;
+    border-bottom:2px dotted var(--line);
+  }
+  @supports (-webkit-text-stroke: 1px #000){
+    .cell .dr{
+      -webkit-text-stroke:1.1px var(--blue);
+      color:transparent;
+      border-bottom-color:color-mix(in srgb, var(--blue) 45%, transparent);
+    }
+  }
   .cell.hint-soft{background:var(--hint-soft)}
   .cell.hint-x{background:var(--hint-bg);box-shadow:inset 0 0 0 2px var(--hint)}
   .cell.hint-main{background:var(--hint-bg);box-shadow:inset 0 0 0 3px var(--hint)}
@@ -224,7 +238,7 @@
 
   /* ---------- Controls ---------- */
   .dock{display:flex;flex-direction:column;gap:18px}
-  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .tool{
     display:flex;flex-direction:column;align-items:center;gap:6px;
     font-size:12px;font-weight:500;color:var(--muted);
@@ -296,9 +310,9 @@
       background:var(--bg);
       display:block;
     }
-    .tools{grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;margin:0 auto}
-    .tool{font-size:12px}
-    .tool .ring{width:56px;height:56px}
+    .tools{grid-template-columns:repeat(4,1fr);gap:6px;max-width:380px;margin:0 auto}
+    .tool{font-size:11px}
+    .tool .ring{width:50px;height:50px}
     .numpad,.dock .primary,.hint-line{display:none}
 
     /* Compact 3x3 keypad parked in the thumb's corner, tools stacked beside it */
@@ -529,6 +543,10 @@
           <span class="ring"><svg viewBox="0 0 24 24"><path d="m14 4 7 7-9 9H7l-4-4 11-12z"/><path d="m9 9 7 7"/></svg></span>
           Gumka
         </button>
+        <button class="tool" id="draftBtn" title="Cyfra ołówkiem (O)" aria-pressed="false">
+          <span class="ring"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" stroke-dasharray="4 3"/><path d="M10 9.5 12.5 8V16"/><path d="M10.5 16h4"/></svg><span class="badge" id="draftBadge">WYŁ</span></span>
+          Ołówek
+        </button>
         <button class="tool" id="notesBtn" title="Notatki (N)" aria-pressed="false">
           <span class="ring"><svg viewBox="0 0 24 24"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg><span class="badge" id="notesBadge">WYŁ</span></span>
           Notatki
@@ -539,7 +557,7 @@
         <svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>
       </button>
       <button class="primary" id="newGameBtn">Nowa gra</button>
-      <p class="hint-line">Strzałki · 1–9 · N notatki · H podpowiedź · R powrót · Ctrl+Z</p>
+      <p class="hint-line">Strzałki · 1–9 · O ołówek · N notatki · H podpowiedź · R powrót · Ctrl+Z</p>
     </aside>
     <div class="scroll-pad" aria-hidden="true"></div>
   </main>
@@ -768,7 +786,7 @@ function makePuzzle(diffKey){
 
 /* ============================== State ============================== */
 let S=null;            // {diff,puzzle,solution,board,notes,mistakes,done,over}
-let sel=-1, notesMode=false, pickerClosedAt=0;
+let sel=-1, mode="pen", pickerClosedAt=0;   // pen | draft | notes
 let undoStack=[], redoStack=[];
 let settings={errors:true, same:true, clean:true, theme:"system", longpage:true, input:"dial", handed:"right"};
 const KEY_SCROLL="sudokuIndygo.scroll.v2";
@@ -858,7 +876,9 @@ function selectCell(i){ sel=i; refresh(); }
 
 function refresh(){
   if(!S) return;
-  const selVal = sel>=0 ? S.board[sel] : 0;
+  if(!S.draft) S.draft=new Array(81).fill(0);
+  const shown=i=>S.board[i]||S.draft[i];
+  const selVal = sel>=0 ? shown(sel) : 0;
   const counts=new Array(10).fill(0);
   for(let i=0;i<81;i++) if(S.board[i]) counts[S.board[i]]++;
 
@@ -880,9 +900,9 @@ function refresh(){
     let cls="cell";
     if(c3(i)) cls+=" bR";
     if(r3(i)) cls+=" bB";
-    if(S.puzzle[i]) cls+=" given"; else if(v) cls+=" user";
+    if(S.puzzle[i]) cls+=" given"; else if(v) cls+=" user"; else if(S.draft[i]) cls+=" draft";
     if(peerSet && peerSet.has(i)) cls+=" peer";
-    if(settings.same && v && selVal && v===selVal && i!==sel) cls+=" same";
+    if(settings.same && shown(i) && selVal && shown(i)===selVal && i!==sel) cls+=" same";
     const wrong = v && ((settings.errors && v!==S.solution[i]) || conflict[i]);
     if(wrong) cls+=" error";
     if(i===sel) cls+=" sel";
@@ -893,6 +913,8 @@ function refresh(){
     let html="";
     if(v){
       html=String(v);
+    }else if(S.draft[i]){
+      html='<span class="dr">'+S.draft[i]+"</span>";
     }else if(S.notes[i]){
       html='<span class="notes">';
       for(let d=1;d<=9;d++) html+="<i>"+((S.notes[i]>>d)&1 ? d : "")+"</i>";
@@ -905,9 +927,12 @@ function refresh(){
   for(const k in tabBtns) tabBtns[k].classList.toggle("active", k===S.diff);
   $("mistakes").textContent=S.mistakes;
   $("mistakesStat").style.display = settings.errors ? "" : "none";
-  $("notesBadge").textContent=notesMode?"WŁ":"WYŁ";
-  $("notesBtn").classList.toggle("active",notesMode);
-  $("notesBtn").setAttribute("aria-pressed",String(notesMode));
+  $("notesBadge").textContent=mode==="notes"?"WŁ":"WYŁ";
+  $("notesBtn").classList.toggle("active",mode==="notes");
+  $("notesBtn").setAttribute("aria-pressed",String(mode==="notes"));
+  $("draftBadge").textContent=mode==="draft"?"WŁ":"WYŁ";
+  $("draftBtn").classList.toggle("active",mode==="draft");
+  $("draftBtn").setAttribute("aria-pressed",String(mode==="draft"));
   $("undoBtn").disabled=!undoStack.length;
   if(hintView){
     for(const i of hintView.soft) cells[i].classList.add("hint-soft");
@@ -925,24 +950,24 @@ function r3(i){ const r=Math.floor(i/9); return r===2||r===5; }
 /* ============================== Moves ============================== */
 function locked(){ return !S || S.done || S.over; }
 function snapshot(){
-  undoStack.push({b:[...S.board], n:[...S.notes]});
+  undoStack.push({b:[...S.board], n:[...S.notes], d:[...S.draft]});
   if(undoStack.length>300) undoStack.shift();
   redoStack.length=0;
 }
 function undo(){
   if(!undoStack.length||locked()) return;
   closeHint();
-  redoStack.push({b:[...S.board], n:[...S.notes]});
+  redoStack.push({b:[...S.board], n:[...S.notes], d:[...S.draft]});
   const p=undoStack.pop();
-  S.board=p.b; S.notes=p.n;
+  S.board=p.b; S.notes=p.n; S.draft=p.d||S.draft;
   refresh(); saveState();
 }
 function redo(){
   if(!redoStack.length||locked()) return;
   closeHint();
-  undoStack.push({b:[...S.board], n:[...S.notes]});
+  undoStack.push({b:[...S.board], n:[...S.notes], d:[...S.draft]});
   const p=redoStack.pop();
-  S.board=p.b; S.notes=p.n;
+  S.board=p.b; S.notes=p.n; S.draft=p.d||S.draft;
   refresh(); saveState();
 }
 
@@ -951,16 +976,22 @@ function inputDigit(d){
   if(sel<0){ toast("Najpierw wybierz pole"); return; }
   closeHint();
   if(S.puzzle[sel]) return;
-  if(notesMode && S.board[sel]) return;
+  if(!S.draft) S.draft=new Array(81).fill(0);
+  if(mode!=="pen" && S.board[sel]) return;   // a committed digit is not scratch space
   snapshot();
-  if(notesMode){
+  if(mode==="notes"){
     S.notes[sel]^= (1<<d);
+  }else if(mode==="draft"){
+    // A pencilled digit is a guess: it touches no notes, here or anywhere else.
+    S.draft[sel] = S.draft[sel]===d ? 0 : d;
   }else{
     if(S.board[sel]===d){
       S.board[sel]=0;                       // second tap clears
+      S.draft[sel]=0;
     }else{
       S.board[sel]=d;
       S.notes[sel]=0;
+      S.draft[sel]=0;
       // Every entered digit wipes that pencil mark from the cells that see it.
       if(settings.clean) for(const p of PEERS[sel]) S.notes[p]&=~(1<<d);
       const correct = d===S.solution[sel];
@@ -1009,10 +1040,13 @@ function rewind(){
 function eraseCell(){
   if(locked()) return;
   if(sel<0||S.puzzle[sel]) return;
-  if(!S.board[sel]&&!S.notes[sel]) return;
+  if(!S.draft) S.draft=new Array(81).fill(0);
+  if(!S.board[sel]&&!S.draft[sel]&&!S.notes[sel]) return;
   closeHint();
   snapshot();
-  S.board[sel]=0; S.notes[sel]=0;
+  if(S.board[sel]) S.board[sel]=0;
+  else if(S.draft[sel]) S.draft[sel]=0;
+  else S.notes[sel]=0;
   refresh(); saveState();
 }
 
@@ -1060,9 +1094,9 @@ function startGame(diffKey){
       diff:diffKey, puzzle, solution,
       board:[...puzzle],
       notes:new Array(81).fill(0),
-      mistakes:0, done:false, over:false, elim:new Array(81).fill(0)
+      mistakes:0, done:false, over:false, elim:new Array(81).fill(0), draft:new Array(81).fill(0)
     };
-    sel=-1; notesMode=false;
+    sel=-1; mode="pen";
     undoStack=[]; redoStack=[];
     $("genOverlay").classList.remove("show");
     refresh(); saveState();
@@ -1073,7 +1107,8 @@ function restartPuzzle(){
   S.board=[...S.puzzle];
   S.notes=new Array(81).fill(0);
   S.mistakes=0; S.done=false; S.over=false; S.elim=new Array(81).fill(0);
-  sel=-1; notesMode=false;
+  S.draft=new Array(81).fill(0);
+  sel=-1; mode="pen";
   undoStack=[]; redoStack=[];
   hideModals();
   refresh(); saveState();
@@ -1541,6 +1576,7 @@ function applyHint(){
     snapshot();
     S.board[h.cell]=h.digit;
     S.notes[h.cell]=0;
+    if(S.draft) S.draft[h.cell]=0;
     if(settings.clean) for(const p of PEERS[h.cell]) S.notes[p]&=~(1<<h.digit);
     S.hints=(S.hints||0)+1;
     sel=h.cell;
@@ -1594,7 +1630,8 @@ function init(){
   $("hintBtn").addEventListener("click",showHint);
   $("hintApply").addEventListener("click",applyHint);
   $("hintClose").addEventListener("click",closeHint);
-  $("notesBtn").addEventListener("click",()=>{ notesMode=!notesMode; refresh(); });
+  $("notesBtn").addEventListener("click",()=>{ mode = mode==="notes" ? "pen" : "notes"; refresh(); });
+  $("draftBtn").addEventListener("click",()=>{ mode = mode==="draft" ? "pen" : "draft"; refresh(); });
   $("flipBtn").addEventListener("click",()=>{
     settings.handed = settings.handed==="left" ? "right" : "left";
     saveSettings(); applyInputMode();
@@ -1649,7 +1686,8 @@ function init(){
       return;
     }
     if((e.ctrlKey||e.metaKey)&&(e.key==="y"||e.key==="Y")){ e.preventDefault(); redo(); return; }
-    if(e.key==="n"||e.key==="N"){ notesMode=!notesMode; refresh(); return; }
+    if(e.key==="n"||e.key==="N"){ mode = mode==="notes" ? "pen" : "notes"; refresh(); return; }
+    if(e.key==="o"||e.key==="O"){ mode = mode==="draft" ? "pen" : "draft"; refresh(); return; }
     if(e.key==="r"||e.key==="R"){ rewind(); return; }
     if(e.key==="h"||e.key==="H"){ showHint(); return; }
     if(e.key==="Escape"){ closeHint(); return; }
