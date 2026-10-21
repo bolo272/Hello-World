@@ -117,6 +117,12 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .hintline{margin:0;font-size:12px;color:var(--ink-soft)}
 .locked{margin:4px 2px 0;font-size:12px;font-weight:700;color:var(--ink-soft)}
 .sheet-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.status{margin:0;font-weight:800}
+.trades{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.trade{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px;border:2px solid var(--line);border-radius:14px;background:#fff;font-weight:800;cursor:pointer}
+.trade:hover:not(:disabled){border-color:var(--ink)}
+.trade:disabled{opacity:.45;cursor:not-allowed}
+.deal{font-size:10px;letter-spacing:.06em;text-transform:uppercase;background:var(--sun);border-radius:99px;padding:1px 7px}
 
 /* ---- modals ---- */
 .modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(10,34,44,.42);
@@ -331,8 +337,11 @@ const B = {
   mill:   { name:'Młyn',        cost:{ wood:3, stone:3 }, job:true },
   inn:    { name:'Karczma',     cost:{ wood:4, stone:4 }, job:true },
   light:  { name:'Latarnia',    cost:{ wood:5, stone:6 }, job:true },
+  granary:{ name:'Spichlerz',   cost:{ wood:3, stone:2 } },
+  smoke:  { name:'Wędzarnia',   cost:{ wood:2, stone:3 }, job:true },
+  market: { name:'Targ',        cost:{ wood:3 },          job:true },
 };
-const BUILD_ORDER = ['hut','field','fisher','lumber','tree','quarry','well','mill','inn','light'];
+const BUILD_ORDER = ['hut','field','fisher','lumber','tree','quarry','granary','smoke','market','well','mill','inn','light'];
 const START_UNLOCKED = ['hut','field','fisher','lumber','tree'];
 const MILESTONES = [
   { pop:6,  unlock:['quarry','well'], gifts:[{ food:6 },{ wood:6 }] },
@@ -356,11 +365,22 @@ const LEVELS = [
     goals:[ { t:'Odkryj cały ląd', test:() => fogLand()===0, prog:() => `ukryte: ${fogLand()} pól` },
             { t:'Odkryj cały ląd przed zimą', test:() => fogLand()===0 && S.day<=16, prog:() => S.day>16 ? 'za późno' : `zima od dnia 16` },
             { t:'Zbierz 12 mieszkańców', test:() => S.pop>=12, prog:() => `${S.pop}/12` } ] },
-  { id:'cypel', name:'Skalisty Cypel', blurb:'Mało ziemi, dużo skał. Trzeba żyć z morza i handlu.', soon:true, theme:'rock' },
+  { id:'cypel', name:'Skalisty Cypel', blurb:'Mało żyznej ziemi, dużo skał, a jedzenie się psuje. Trzeba żyć z morza i handlu.',
+    n:12, land:[40,62], rocks:9, groves:[[3,4]], start:'center', shape:[.62,1.5], rocky:true, spoil:.2, theme:'rock',
+    extra:['quarry','granary','smoke','market'], res:{ food:12, wood:12, stone:4 },
+    intro:'Pola rosną tu tylko na zielonej, żyznej ziemi, a jedzenie ponad to, co chronią chatki i <b>spichlerz</b>, się psuje. Kamień sprzedasz na <b>targu</b>.',
+    goals:[ { t:'Dotrwaj do wiosny z 10 mieszkańcami', test:() => S.day>=21 && S.pop>=10, prog:() => `${S.pop}/10${S.day<21?', wiosna od dnia 21':''}` },
+            { t:'Zgromadź 30 jedzenia przed zimą', test:() => S.food>=30 && S.day<=16, prog:() => S.day>16 ? 'za późno' : `${S.food}/30` },
+            { t:'Zbierz 20 mieszkańców', test:() => S.pop>=20, prog:() => `${S.pop}/20` } ] },
   { id:'wulkan', name:'Wulkan', blurb:'Żyzna ziemia u stóp dymiącej góry. Ewakuować się czy ryzykować plony?', soon:true, theme:'volcano' },
   { id:'mroz', name:'Mroźna Wyspa', blurb:'Zima trwa tu dwa razy dłużej. Ogień to życie.', soon:true, theme:'frost' },
   { id:'archipelag', name:'Archipelag', blurb:'Połącz trzy wysepki łodziami w jedno państewko.', soon:true, theme:'multi' },
 ];
+// market offers; the last slot is a deal that changes every day
+const TRADES = [ { give:{ stone:3 }, get:{ food:4 } }, { give:{ stone:3 }, get:{ wood:2 } }, { give:{ wood:3 }, get:{ food:4 } } ];
+const DEALS = [ { give:{ stone:2 }, get:{ food:4 } }, { give:{ stone:2 }, get:{ wood:3 } }, { give:{ food:4 }, get:{ wood:3 } },
+                { give:{ wood:2 }, get:{ stone:4 } }, { give:{ stone:4 }, get:{ food:7 } } ];
+const PROTECT = { hut:3, granary:15, smoke:8 };
 const PERKS = [
   { stars:2, t:'+4 drewna', fx:{ wood:4 } },
   { stars:3, t:'koza', fx:{ goat:1 } },
@@ -418,11 +438,11 @@ const DISC = {
     opts:[ { label:'Rozbierzcie kadłub', fx:{ wood:6 } }, { label:'Ratujcie ładunek', fx:{ food:5 } } ] },
 };
 
-const SOLID = { hut:1, well:1, mill:1, fisher:1, lumber:1, quarry:1, light:1, inn:1 };
+const SOLID = { hut:1, well:1, mill:1, fisher:1, lumber:1, quarry:1, light:1, inn:1, granary:1, smoke:1, market:1 };
 const KNAME = { 1:'rock', 2:'ruins', 3:'spring' };
 const DOOR = { hut:[-.055,.27], fisher:[-.09,.2], inn:[-.005,.31] };
-const CHIM = { hut:[-.1,-.08,.39], inn:[.16,-.1,.51] };
-const TALL = { tree:.55, hut:.45, well:.38, field:.12, mill:.95, fisher:.42, lumber:.3, quarry:.3, light:.95, inn:.55 };
+const CHIM = { hut:[-.1,-.08,.39], inn:[.16,-.1,.51], smoke:[.07,-.08,.44] };
+const TALL = { tree:.55, hut:.45, well:.38, field:.12, mill:.95, fisher:.42, lumber:.3, quarry:.3, light:.95, inn:.55, granary:.48, smoke:.5, market:.42 };
 const ROOFS = [['#d4694b','#b9533a'],['#5f86a6','#4a6e8c'],['#d9a441','#bb8a2f']];
 const SNOWROOF = ['#eef3f6','#d6e0e6'];
 const SHIRTS = ['#d65a4a','#3f7cc4','#e3a33b','#6a9f45','#9b5fb0','#e57fa0','#2f8f8a'];
@@ -491,6 +511,9 @@ function desc(k){
     mill:  `+1${f} za każde pole obok (maks. 4), także zimą. Potrzebuje 1 pracownika.`,
     inn:   '2 łóżka. Gdy są wolne łóżka i jedzenie, każdej nocy ściąga dodatkowego osadnika. Potrzebuje 1 pracownika.',
     light: 'Co 3 dni przypływa kupiec. Osadnicy przypływają także zimą. Na zamglonej wyspie odsłania okolicę. Potrzebuje 1 pracownika.',
+    granary:`Chroni 15${f} przed zepsuciem (każda chatka chroni 3). Nie potrzebuje pracownika.`,
+    smoke: `+1${f} za każdego rybaka obok (maks. 3), także zimą. Chroni 8${f} przed zepsuciem. Potrzebuje 1 pracownika.`,
+    market:`2 wymiany towarów dziennie, w tym jedna okazja, która zmienia się codziennie. Kamień schodzi tu najlepiej. Potrzebuje 1 pracownika.`,
   }[k];
 }
 
@@ -517,7 +540,7 @@ const totalStars = () => LEVELS.reduce((n,l)=>n+starsOf(l.id),0);
 
 // what is around a tile; fogged tiles are unknown and count as nothing
 function around(x,y){
-  const n={ water:0, rock:0, field:0, grown:0, well:0, hut:0 };
+  const n={ water:0, rock:0, field:0, grown:0, well:0, hut:0, fisher:0 };
   for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
     if(!dx && !dy) continue;
     if(hidden(x+dx,y+dy)) continue;
@@ -528,6 +551,7 @@ function around(x,y){
     else if(c.b==='tree' && c.g>=4) n.grown++;
     else if(c.b==='well') n.well++;
     else if(c.b==='hut') n.hut++;
+    else if(c.b==='fisher') n.fisher++;
   }
   return n;
 }
@@ -540,8 +564,10 @@ function outputOf(type,x,y,season,F){
   else if(type==='lumber'){ if(!F.noLumber) o.wood = Math.min(3,n.grown); }
   else if(type==='quarry'){ if(!F.noLumber) o.stone = Math.min(4,n.rock*2); }
   else if(type==='mill'){ o.food = Math.min(4,n.field); }
+  else if(type==='smoke'){ if(!F.noFish) o.food = Math.min(3,n.fisher); }
   return o;
 }
+const protectedFood = () => S.cells.reduce((n,c)=>n+(c.l && PROTECT[c.b] || 0), 0);
 const bedsAt = (type,x,y) => type==='hut' ? 3 + around(x,y).well : type==='inn' ? 2 : 0;
 function costOf(k){ const c={ ...B[k].cost }; if(S.free>0 && c.wood) c.wood=0; return c; }
 
@@ -567,8 +593,10 @@ function plan(){
     prod.set(i,o); tot.food+=o.food; tot.wood+=o.wood; tot.stone+=o.stone;
     if(!F.noWork){ if(c.b==='inn') innOn=true; if(c.b==='light') lightOn=true; }
   }
+  const rate=LV().spoil||0, protect=protectedFood(), spoil=rate ? Math.floor(Math.max(0,S.food+tot.food-S.pop-protect)*rate) : 0;
+  const markets=F.noWork ? 0 : [...staffed].filter(i=>S.cells[i].b==='market').length;
   return { season, jobs, staffed, idle:jobs.length-staffed.size, hands:Math.max(0,hands), away, beds, prod, tot, eat:S.pop, heat, innOn, lightOn,
-           net:{ food:tot.food-S.pop, wood:tot.wood-heat, stone:tot.stone } };
+           spoil, protect, trades:markets*2, net:{ food:tot.food-S.pop-spoil, wood:tot.wood-heat, stone:tot.stone } };
 }
 
 /* ================= island ================= */
@@ -576,10 +604,10 @@ function h2(x,y,s){ let h=Math.imul(x,374761393)^Math.imul(y,668265263)^Math.imu
 function vnoise(x,y,s){ const xi=Math.floor(x), yi=Math.floor(y), u=smooth(x-xi), v=smooth(y-yi);
   const a=h2(xi,yi,s), b=h2(xi+1,yi,s), c=h2(xi,yi+1,s), d=h2(xi+1,yi+1,s); return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v; }
 const fbm = (x,y,s) => vnoise(x,y,s)*.65 + vnoise(x*2.1,y*2.1,s+7)*.35;
-function landMask(n,seed,ox,oy){
-  const c0=(n-1)/2, L=new Array(n*n).fill(false);
+function landMask(n,seed,ox,oy,shape){
+  const c0=(n-1)/2, L=new Array(n*n).fill(false), [sx,sy]=shape||[1,1];
   for(let y=1;y<n-1;y++) for(let x=1;x<n-1;x++){
-    const d=Math.hypot((x-c0)/c0,(y-c0)/c0);
+    const d=Math.hypot((x-c0)/c0*sx,(y-c0)/c0*sy);
     L[y*n+x] = 1 - d + (fbm(x*.36+ox,y*.36+oy,seed)-.5) > .12;
   }
   return L;
@@ -588,7 +616,7 @@ function genIsland(rng,L){
   const seed=(rng()*1e9)|0, c0=(N-1)/2, [lo,hi]=L.land;
   let land=null;
   for(let attempt=0; attempt<80; attempt++){
-    const M=landMask(N,seed,rng()*60,rng()*60);
+    const M=landMask(N,seed,rng()*60,rng()*60,L.shape);
     const comp=new Int16Array(N*N).fill(-1); let best=-1, bestSize=0, id=0;
     for(let i=0;i<N*N;i++){
       if(!M[i] || comp[i]>=0) continue;
@@ -604,6 +632,12 @@ function genIsland(rng,L){
   }
   const cells=land.map(l => ({ l:l?1:0, b:null, k:0, s:rng(), o:0, day:0, g:4 }));
   const landIdx=[]; cells.forEach((c,i) => { if(c.l) landIdx.push(i); });
+  if(L.rocky){
+    // only the best ~30% of the land, in patches, is fertile enough for fields
+    const fo=rng()*40, val=i=>fbm((i%N)*.55+fo,((i/N)|0)*.55+fo,seed+11);
+    const cut=landIdx.map(val).sort((a,b)=>b-a)[Math.floor(landIdx.length*.3)];
+    landIdx.forEach(i => { cells[i].r=val(i)>cut ? 0 : 1; });
+  }
   const lx = i => i%N, ly = i => (i/N)|0;
   const waterNb = i => DIRS4.some(([dx,dy]) => { const x=lx(i)+dx, y=ly(i)+dy; return !inb(x,y) || !cells[idx(x,y)].l; });
   // starting hut on the shore: near the middle, or on a far beach for islands meant to be explored
@@ -983,8 +1017,47 @@ function drawSpring(c,cx,cy,u,t,o){
   c.fillStyle=`rgba(255,255,255,${.5+tw*.5})`; ell(c,px+u*.06,py-u*.01,u*.02*tw+u*.005,u*.01);
   drawRock(c,...p(-.2,-.22,0),u*.8,t,{ s:o.s, season:o.season });
 }
+function drawGranary(c,cx,cy,u,t,o){
+  const p=(dx,dy,z)=>Pt(cx,cy,u,dx,dy,z), R=roof(o,['#8b5a3c','#734a31']);
+  shadow(c,cx,cy,u,.32,.14);
+  for(const [dx,dy] of [[-.18,-.13],[.18,-.13],[-.18,.13],[.18,.13]]) box(c,cx,cy,u,dx,dy,.025,.025,0,.07,'#7a5236','#6a4630','#5a3a26');
+  box(c,cx,cy,u,0,0,.22,.16,.07,.17,'#d6a46a','#c48f55','#a77744');
+  c.strokeStyle='rgba(90,55,25,.35)'; c.lineWidth=Math.max(.6,u*.008);
+  for(const z of [.12,.17,.21]){ seg(c,p(-.22,.16,z),p(.22,.16,z)); seg(c,p(.22,-.16,z),p(.22,.16,z)); }
+  poly(c,[p(-.06,.16,.07),p(.04,.16,.07),p(.04,.16,.19),p(-.06,.16,.19)],'#6e4529',1);
+  gable(c,cx,cy,u,0,0,.22,.16,.24,.14,.035,R[0],R[1],'#a77744');
+  c.fillStyle='#e8d9b0';
+  for(const dy of [.2,.3]){ const s=p(.3,dy,0); ell(c,s[0],s[1]-u*.03,u*.045,u*.035); }
+}
+function drawSmoke(c,cx,cy,u,t,o){
+  const p=(dx,dy,z)=>Pt(cx,cy,u,dx,dy,z), R=roof(o,['#5d5550','#4b4440']);
+  shadow(c,cx,cy,u,.32,.14);
+  box(c,cx,cy,u,-.04,-.06,.18,.14,0,.15,'#d2cbbd','#bcb4a4','#a19989');
+  poly(c,[p(-.12,.08,0),p(-.04,.08,0),p(-.04,.08,.1),p(-.12,.08,.1)],'#4a3324',1);
+  gable(c,cx,cy,u,-.04,-.06,.18,.14,.15,.11,.03,R[0],R[1],'#a19989',
+    () => box(c,cx,cy,u,.07,-.08,.045,.045,.18,.24,'#8f877b','#7d766b','#6a645a'));
+  c.strokeStyle='#6b4a2f'; c.lineWidth=Math.max(1,u*.018); c.lineCap='round';
+  const a=p(-.16,.3,0), b=p(.2,.3,0), at=p(-.16,.3,.17), bt=p(.2,.3,.17);
+  seg(c,a,at); seg(c,b,bt); c.lineWidth=Math.max(.8,u*.01); seg(c,at,bt);
+  for(let k=0;k<4;k++){ const q=p(-.11+k*.09,.3,.17); c.fillStyle=k%2?'#c98a4b':'#b7793f'; ell(c,q[0],q[1]+u*.045,u*.018,u*.04); }
+}
+function drawMarket(c,cx,cy,u,t,o){
+  const p=(dx,dy,z)=>Pt(cx,cy,u,dx,dy,z);
+  shadow(c,cx,cy,u,.34,.15);
+  c.strokeStyle='#6b4a2f'; c.lineWidth=Math.max(1,u*.02); c.lineCap='round';
+  for(const [dx,dy] of [[-.24,-.16],[.24,-.16]]) seg(c,p(dx,dy,0),p(dx,dy,.33));
+  box(c,cx,cy,u,0,.04,.24,.11,0,.09,'#c08a54','#a77442','#8d6237');
+  for(const [col,dx] of [['#cf4f3c',-.16],['#e2b04a',-.06],['#7aa5c2',.05],['#cf4f3c',.15]]){ const q=p(dx,.04,.09); c.fillStyle=col; ell(c,q[0],q[1]-u*.015,u*.035,u*.022); }
+  c.strokeStyle='#6b4a2f'; c.lineWidth=Math.max(1,u*.02);
+  for(const [dx,dy] of [[-.24,.2],[.24,.2]]) seg(c,p(dx,dy,0),p(dx,dy,.26));
+  const sw=.52/6, cols=o.season===3?SNOWROOF:['#d4503f','#f7f3ea'];
+  for(let k=0;k<6;k++){ const x0=-.26+k*sw, x1=x0+sw; poly(c,[p(x0,-.18,.34),p(x1,-.18,.34),p(x1,.22,.25),p(x0,.22,.25)],cols[k%2]); }
+  poly(c,[p(-.26,-.18,.34),p(.26,-.18,.34),p(.26,.22,.25),p(-.26,.22,.25)]); c.strokeStyle=EDGE; c.lineWidth=EDGEW; c.stroke();
+  box(c,cx,cy,u,.3,.3,.06,.06,0,.08,'#b98450','#9a6a3e','#83592f');
+}
 const DRAW={ tree:drawTrees, hut:drawHut, well:drawWell, field:drawField, mill:drawMill, fisher:drawFisher, lumber:drawLumber,
-             quarry:drawQuarry, light:drawLight, inn:drawInn, rock:drawRock, ruins:drawRuins, spring:drawSpring };
+             quarry:drawQuarry, light:drawLight, inn:drawInn, rock:drawRock, ruins:drawRuins, spring:drawSpring,
+             granary:drawGranary, smoke:drawSmoke, market:drawMarket };
 function drawType(c,type,cx,cy,u,t,o){ EDGEW=Math.max(.6,u*.012); DRAW[type](c,cx,cy,u,t,o); }
 
 /* ================= creatures ================= */
@@ -1182,6 +1255,7 @@ function drawBoat(c,b,t){
 }
 function groundCol(cell){
   const v=cell.s-.5, w=(cell.s*7)%1-.5;
+  if(cell.r && SEASON!==3) return `hsl(${74+v*18},${SEASON===2?13:17}%,${57+w*6}%)`;
   if(SEASON===0) return `hsl(${100+v*14},50%,${54+w*6}%)`;
   if(SEASON===1) return `hsl(${88+v*14},46%,${51+w*6}%)`;
   if(SEASON===2) return `hsl(${62+v*16},40%,${50+w*6}%)`;
@@ -1219,7 +1293,11 @@ function drawGround(c,x,y,t){
   if(isWater(x,y+1)) poly(c,[D,C,iso(x+1,y+.84,0),iso(x,y+.84,0)],sand);
   c.strokeStyle=SEASON===3?'rgba(90,120,140,.12)':'rgba(30,70,20,.10)'; c.lineWidth=1;
   c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(Bp[0],Bp[1]); c.lineTo(C[0],C[1]); c.lineTo(D[0],D[1]); c.closePath(); c.stroke();
-  if(!cell.b && !cell.k && SEASON!==3){
+  if(!cell.b && !cell.k && cell.r){
+    const r=rngOf(cell.s); c.fillStyle=SEASON===3?'rgba(140,152,160,.45)':'#9aa09e';
+    for(let k=0;k<3;k++){ const f=iso(x+.5+(r()-.5)*.7,y+.5+(r()-.5)*.7,0); ell(c,f[0],f[1],Math.max(1.2,U*.03),Math.max(1,U*.018)); }
+  }
+  else if(!cell.b && !cell.k && SEASON!==3){
     const r=rngOf(cell.s), n=SEASON===0?2+((r()*3)|0):SEASON===1?(r()*3)|0:(r()*2)|0, pal=FLOWERS[SEASON];
     for(let k=0;k<n;k++){ const f=iso(x+.5+(r()-.5)*.7,y+.5+(r()-.5)*.7,0); c.fillStyle=pal[(r()*pal.length)|0]; ell(c,f[0],f[1],Math.max(1,U*.02),Math.max(1,U*.016)); }
     c.strokeStyle='rgba(40,90,30,.35)'; c.lineWidth=1;
@@ -1481,7 +1559,7 @@ function thumb(L){
   const seed=[...L.id].reduce((s,ch)=>s*31+ch.charCodeAt(0)|0,7)>>>0;
   const parts = L.theme==='multi' ? [[8,-150,-10,26],[8,140,-30,26],[7,0,60,26]] : [[L.n||11,0,0,L.n===13?34:40]];
   parts.forEach(([n,ox,oy,u],pi) => {
-    const m=landMask(n,seed+pi*17,(seed%50)+pi*9,(seed%37)+pi*5), cx=320+ox, cy=165+oy-n*u*.25;
+    const m=landMask(n,seed+pi*17,(seed%50)+pi*9,(seed%37)+pi*5,L.shape), cx=320+ox, cy=165+oy-n*u*.25;
     const P=(gx,gy,z)=>[cx+(gx-gy)*u*.5, cy+(gx+gy)*u*.25-(z||0)*u];
     const at=(x,y)=>x>=0&&y>=0&&x<n&&y<n&&m[y*n+x];
     for(let d=0; d<=2*(n-1); d++) for(let x=Math.max(0,d-(n-1)); x<=Math.min(n-1,d); x++){
@@ -1530,6 +1608,7 @@ function goalHtml(){
     if(n>=0){ const g=L.goals[n], p=g.prog && g.prog(); parts.push(`Cel wyspy: <b>${g.t}</b>${p?` (${p})`:''}`); }
     else parts.push('<b>Wszystkie cele zdobyte.</b> Wyspa żyje dalej, a na mapie czekają inne.');
   }
+  if(PLAN.spoil>0) parts.push(`<b class="neg">Tej nocy zepsuje się ${PLAN.spoil}${I('food')}.</b>`);
   return parts.join(' ');
 }
 function updateHUD(){
@@ -1552,10 +1631,11 @@ function updateHUD(){
 function refresh(){ PLAN=plan(); syncCreatures(false); updateHUD(); if(!sheet.hidden && selTile) renderSheet(); save(); }
 
 /* ================= sheet ================= */
+let sheetAt=0;
 const tappable = (x,y) => inb(x,y) && (hidden(x,y) ? fogShown(idx(x,y)) : !isWater(x,y));
 function openTile(x,y){
   if(!tappable(x,y)){ closeSheet(); return; }
-  selTile={ x, y }; previewType=null; demolishArm=false;
+  selTile={ x, y }; previewType=null; demolishArm=false; sheetAt=performance.now();
   sheet.hidden=false; renderSheet(); Snd.tick();
   requestAnimationFrame(() => ensureVisible(x,y));
 }
@@ -1595,7 +1675,8 @@ function renderSheet(){
     return;
   }
   if(c.b){ renderBuildingInfo(x,y,c,head,body); return; }
-  head('empty','Wolny teren','Co tu postawić?');
+  if(c.r) head('empty','Skalisty grunt','Pola tu nie urosną. Co tu postawić?');
+  else head('empty','Wolny teren',LV().rocky ? 'Żyzna ziemia, dobra pod pole.' : 'Co tu postawić?');
   renderBuildOptions(x,y,body);
 }
 function renderFog(x,y,i,head,body){
@@ -1621,18 +1702,28 @@ function renderBuildingInfo(x,y,c,head,body){
   let status='';
   if(k==='hut'){ const b=bedsAt('hut',x,y); status=`${b} ${plural(b,'łóżko','łóżka','łóżek')}`; }
   else if(k==='well') status='Pomaga chatkom i polom obok';
+  else if(k==='granary') status=`Chroni 15${I('food')} przed zepsuciem`;
   else if(c.off) status='Wstrzymany';
   else if(!P.staffed.has(i)) status='<span class="neg">Brak rąk do pracy</span>';
   else if(S.flags.noWork) status='Tej nocy odpoczynek';
   else {
     const o=P.prod.get(i);
-    status = total(o) ? `Da ${outHtml(o)} tej nocy` : k==='inn' ? 'Karczmarz czeka na gości' : k==='light' ? 'Latarnik pilnuje światła' : '<span class="neg">W tym miejscu nic nie zbiera</span>';
+    status = total(o) ? `Da ${outHtml(o)} tej nocy` : k==='inn' ? 'Karczmarz czeka na gości' : k==='light' ? 'Latarnik pilnuje światła'
+      : k==='market' ? 'Kupcy czekają na towar' : '<span class="neg">W tym miejscu nic nie zbiera</span>';
   }
   head(k,B[k].name,status);
   const today=c.day===S.day, refund={};
   for(const [r,v] of Object.entries(B[k].cost)){ const back=today?v:Math.floor(v/2); if(back) refund[r]=back; }
   const blocked=P.beds-bedsAt(k,x,y)<S.pop;
   let h=`<p class="desc">${desc(k)}</p>`;
+  if(k==='market'){
+    const left=Math.max(0,P.trades-S.trades);
+    h+=`<p class="status">${P.trades ? `Wymiany dziś: ${left} z ${P.trades}` : 'Targ nie handluje: nikt tu dziś nie pracuje.'}</p><div class="trades">`
+      + tradeOffers().map((o,n) => {
+        const ok=left>0 && Object.entries(o.give).every(([r,v])=>S[r]>=v);
+        return `<button class="trade" type="button" id="trade-${n}" data-n="${n}" ${ok?'':'disabled'}>${o.deal?'<span class="deal">okazja dnia</span>':''}<span>${Object.entries(o.give).map(([r,v])=>v+I(r)).join(' ')} → ${Object.entries(o.get).map(([r,v])=>v+I(r)).join(' ')}</span></button>`;
+      }).join('') + '</div>';
+  }
   if(B[k].job) h+='<p class="hintline">Wstrzymanie zwalnia pracownika dla innych budynków.</p>';
   h+='<div class="sheet-actions">';
   if(B[k].job) h+=`<button class="btn" id="actToggle" type="button">${c.off?'Wznów pracę':'Wstrzymaj pracę'}</button>`;
@@ -1640,6 +1731,7 @@ function renderBuildingInfo(x,y,c,head,body){
   h+='</div>';
   if(blocked) h+='<p class="hintline">Nie da się rozebrać: mieszkańcy nie mieliby gdzie spać.</p>';
   body.innerHTML=h;
+  body.querySelectorAll('.trade').forEach(b => b.addEventListener('click', () => trade(+b.dataset.n,x,y)));
   if(B[k].job) $('actToggle').addEventListener('click', () => { c.off=!c.off; Snd.tick(); refresh(); });
   $('actDemolish').addEventListener('click', () => {
     if(!demolishArm){ demolishArm=true; renderSheet(); return; }
@@ -1666,6 +1758,7 @@ function renderBuildOptions(x,y,body){
     let reason='', eff='', warn='', dim=false;
     if(B[k].need==='water' && !n.water) reason='Musi stać nad wodą';
     else if(B[k].need==='rock' && !n.rock) reason='Musi stać przy skale lub ruinie';
+    else if(k==='field' && cellAt(x,y).r) reason='Pole potrzebuje żyznej ziemi';
     else if(short.length) reason='Brakuje '+short.map(([r,v])=>`${v-S[r]}${I(r)}`).join(' ');
     if(k==='hut'){ const b=bedsAt('hut',x,y); eff=`+${b} ${plural(b,'łóżko','łóżka','łóżek')}`; }
     else if(k==='tree'){ eff='drzewo po 4 nocach'; dim=true; }
@@ -1676,11 +1769,14 @@ function renderBuildOptions(x,y,body){
       eff=bits.join(' · ') || 'brak chatek i pól obok'; dim=!bits.length;
     } else if(k==='inn'){ eff='+2 łóżka, więcej osadników'; }
     else if(k==='light'){ eff=S.fog && fogLand() ? 'kupiec co 3 dni, odsłania okolicę' : 'kupiec co 3 dni'; }
+    else if(k==='granary'){ eff=`chroni 15${I('food')} przed zepsuciem`; }
+    else if(k==='market'){ eff='2 wymiany towarów dziennie'; }
     else {
       const o=outputOf(k,x,y,P.season,{});
       if(k==='field' && P.season===3){ eff=`zimą nic, wiosną ${outHtml(outputOf(k,x,y,0,{}))}`; dim=true; }
-      else if(!total(o)){ eff='tu nic nie zbierze'; dim=true; }
+      else if(!total(o)){ eff=k==='smoke'?'brak rybaków obok':'tu nic nie zbierze'; dim=true; }
       else eff=`${outHtml(o)} na dzień`;
+      if(k==='smoke') eff+=` · chroni 8${I('food')}`;
       const nb=neighborBonus(k,x,y,P.season);
       if(total(nb)) eff+=` · sąsiedzi ${outHtml(nb)}`;
     }
@@ -1704,12 +1800,23 @@ function renderBuildOptions(x,y,body){
     b.addEventListener('blur', () => { if(previewType===k) previewType=null; });
   });
 }
+const tradeOffers = () => [...TRADES, { ...DEALS[(S.day*7+3)%DEALS.length], deal:true }];
+function trade(n,x,y){
+  const o=tradeOffers()[n];
+  if(!o || PLAN.trades-S.trades<=0 || Object.entries(o.give).some(([r,v])=>S[r]<v)){ Snd.err(); return; }
+  for(const [r,v] of Object.entries(o.give)) S[r]-=v;
+  for(const [r,v] of Object.entries(o.get)) S[r]+=v;
+  S.trades++;
+  floaters.push(floater(x,y,[...Object.entries(o.give).map(([r,v])=>[r,-v]),...Object.entries(o.get)],.05,1.8));
+  Snd.build(); checkGoals(); refresh();
+  if(S.queue.length) openNextCard();
+}
 function floater(x,y,items,delay,life){ return { x:x+.5, y:y+.5, z:.55, items, t:-(delay||0), life:life||2.4 }; }
 function burst(x,y){ for(let i=0;i<10;i++){ const a=i/10*Math.PI*2; particles.push({ k:'dust', x:x+.5, y:y+.5, z:.02, vx:Math.cos(a)*.9, vy:Math.sin(a)*.9, life:0, max:.6 }); } }
 function build(k){
   if(!selTile || busy()) return;
   const { x, y }=selTile, c=cellAt(x,y), cost=costOf(k), n=around(x,y);
-  if(c.b || c.k || hidden(x,y) || Object.entries(cost).some(([r,v])=>S[r]<v) || (B[k].need==='water'&&!n.water) || (B[k].need==='rock'&&!n.rock)){ Snd.err(); return; }
+  if(c.b || c.k || hidden(x,y) || Object.entries(cost).some(([r,v])=>S[r]<v) || (B[k].need==='water'&&!n.water) || (B[k].need==='rock'&&!n.rock) || (k==='field'&&c.r)){ Snd.err(); return; }
   for(const [r,v] of Object.entries(cost)) S[r]-=v;
   if(S.free>0 && B[k].cost.wood) S.free--;
   Object.assign(c,{ b:k, o:++S.order, p:clock, day:S.day, off:false, st:0, cut:0, g:k==='tree'?0:4 });
@@ -1749,6 +1856,9 @@ function resolveNight(){
   S.food-=P.eat; S.wood-=P.heat;
   if(S.food<0){ S.food=0; S.pop--; S.lost++; notes.push(['bad','Zabrakło jedzenia. Ktoś odpłynął na ląd.']); }
   if(S.wood<0){ S.wood=0; if(S.pop>0){ S.pop--; S.lost++; notes.push(['bad','Zabrakło drewna na opał. Ktoś odpłynął.']); } }
+  const rate=LV().spoil||0, spoilt=rate ? Math.floor(Math.max(0,S.food-protectedFood())*rate) : 0;
+  if(spoilt){ S.food-=spoilt; notes.push(['bad',`Zepsuło się ${spoilt} jedzenia.`]); }
+  S.trades=0;
   // woodcutters fell a tree every other working night; felled trees grow back
   if(!S.flags.noWork && !S.flags.noLumber) for(const i of P.staffed){
     const c=S.cells[i]; if(c.b!=='lumber') continue;
@@ -1907,8 +2017,9 @@ function openNextCard(){
     const m=MILESTONES.find(m=>m.pop===q.pop);
     if(!m){ nextCard(); return; }
     Snd.fanfare();
-    m.unlock.forEach(k => { if(!S.unlocked.includes(k)) S.unlocked.push(k); });
-    const unl=m.unlock.length ? ` Odblokowano: <b>${m.unlock.map(k=>B[k].name).join(', ')}</b>.` : '';
+    const fresh=m.unlock.filter(k=>!S.unlocked.includes(k));
+    S.unlocked.push(...fresh);
+    const unl=fresh.length ? ` Odblokowano: <b>${fresh.map(k=>B[k].name).join(', ')}</b>.` : '';
     showCard('Osada rośnie',`${m.pop} mieszkańców!`,`Wieść o wyspie dotarła na ląd.${unl} Przypłynął też statek z darami. Co bierzesz?`,
       m.gifts.map(g => ({ label:GIFT_NAME[Object.keys(g)[0]], fx:g, go:() => { applyFx(g); nextCard(); } })));
     return;
@@ -2004,15 +2115,16 @@ function newGame(id){
   N=L.n;
   const rng=mulberry32((Math.random()*4294967295)>>>0), g=genIsland(rng,L);
   S={ v:3, level:L.id, n:N, cells:g.cells, fog:g.fog, disc:g.disc, exp:[], forage:0, lost:0, done:[false,false,false],
-      day:1, food:10, wood:10, stone:0, pop:3, maxPop:3, goats:0, deer:0, free:0, flags:{}, order:1,
-      unlocked:[...START_UNLOCKED], reached:[], queue:[], lastEvent:null, over:false };
+      day:1, food:10, wood:10, stone:0, pop:3, maxPop:3, goats:0, deer:0, free:0, flags:{}, order:1, trades:0,
+      unlocked:[...START_UNLOCKED,...(L.extra||[])], reached:[], queue:[], lastEvent:null, over:false };
+  Object.assign(S,L.res||{});
   const stars=totalStars();
   PERKS.forEach(p => { if(stars>=p.stars) applyFx(p.fx); });
   postLoad(); save();
 }
 function postLoad(){
   N=S.n;
-  S.exp=S.exp||[]; S.forage=S.forage||0; S.lost=S.lost||0; S.done=S.done||[false,false,false];
+  S.exp=S.exp||[]; S.forage=S.forage||0; S.lost=S.lost||0; S.done=S.done||[false,false,false]; S.trades=S.trades||0;
   computeNear();
   S.cells.forEach(c => { c.p=-99; });
   creatures=[]; particles=[]; floaters=[]; night=null; closeSheet(); $('report').hidden=true;
@@ -2116,6 +2228,9 @@ document.addEventListener('keydown', e => {
   else if(!$('mHelp').hidden || !$('mGoals').hidden){ closeModals(); openNextCard(); }
 });
 $('btnEnd').addEventListener('click', () => { Snd.init(); endDay(); });
+// the tap that opens the sheet must not also press whatever button the sheet slides under the finger
+sheet.addEventListener('click', e => { if(performance.now()-sheetAt<450){ e.stopPropagation(); e.preventDefault(); } }, true);
+cv.addEventListener('touchend', e => { if(e.cancelable) e.preventDefault(); }, { passive:false });
 $('sheetClose').addEventListener('click', closeSheet);
 $('report').addEventListener('click', () => { $('report').hidden=true; });
 $('btnSound').addEventListener('click', () => { Snd.init(); Snd.toggle(); paintSound(); });
