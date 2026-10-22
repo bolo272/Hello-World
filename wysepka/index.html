@@ -261,12 +261,12 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <h2 id="helpTitle">Jak grać</h2>
     <ol class="steps">
-      <li><span class="k">1</span><span>Czas płynie sam. Spacja albo przycisk pauzy zatrzymuje grę, a 2× i 3× ją przyspiesza. Planuj na spokojnie.</span></li>
+      <li><span class="k">1</span><span>Czas płynie sam, a doba trwa kilka minut. Spacja albo przycisk pauzy zatrzymuje grę, a 2× i 3× ją przyspiesza. Planuj na spokojnie.</span></li>
       <li><span class="k">2</span><span>Dotknij wolnego terenu, żeby budować. Od razu widać, ile budynek da w tym miejscu.</span></li>
       <li><span class="k">3</span><span>Każdy budynek z pracą potrzebuje jednego mieszkańca. Ludzie mieszkają w chatkach, po czterech w każdej.</span></li>
-      <li><span class="k">4</span><span>Osadnicy jedzą ryby albo chleb, a zimą palą drewno. Chatka z pełnymi potrzebami płaci podatki i przyciąga nowych ludzi. Bez jedzenia ludzie odchodzą.</span></li>
+      <li><span class="k">4</span><span>Osadnicy na bieżąco jedzą ryby albo chleb, a zimą palą drewno. Co 2 minuty osada się rozlicza: chatki z pełnymi potrzebami płacą podatki i przyjmują nowych ludzi, a z głodnych ludzie odchodzą.</span></li>
       <li><span class="k">5</span><span>Gdy osada rośnie, odblokujesz chleb i owce, a potem rzemieślników. Potrzebują więcej, ale płacą dużo wyższe podatki.</span></li>
-      <li><span class="k">6</span><span>Na początku każdej pory roku poza zimą do przystani przypływa statek kupiecki. Handlujesz w przystani.</span></li>
+      <li><span class="k">6</span><span>Rano pierwszego dnia każdej pory roku poza zimą do przystani przypływa statek kupiecki i zostaje do wieczora. Handlujesz w przystani.</span></li>
     </ol>
     <p>Przeciągnij, żeby przesunąć widok. Uszczypnij albo użyj kółka myszy, żeby przybliżyć. Budynek Magazyn pokazuje stan wszystkich towarów.</p>
     <div class="actions"><button class="btn primary" id="btnHelpOk" type="button">Do dzieła</button></div>
@@ -279,7 +279,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 
 /* ================= rules ================= */
 let N = 18;
-const SEASON_LEN = 6, DAY_SEC = 40, WZ = -0.13;
+const SEASON_LEN = 2, DAY_SEC = 360, MIN_PER_DAY = DAY_SEC/60, TICK_MIN = 2, WZ = -0.13;
 const REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const SEASONS = ['Wiosna','Lato','Jesień','Zima'];
 const SEASON_MSG = ['Wiosna. Pola można znów obsiewać.','Lato: pola rodzą najlepiej.','Jesień. Zbierz zapasy drewna i jedzenia na zimę.','Zima. Pola zamarzły, a każda chata potrzebuje drewna na opał.'];
@@ -320,7 +320,7 @@ const B = {
 const CATS = [['home','Mieszkanie'],['food','Żywność'],['raw','Surowce'],['craft','Rzemiosło'],['service','Usługi i magazyny']];
 const BUILD_ORDER = ['hut','fisher','field','mill','bakery','lumber','forester','quarry','sheep','weaver','sawmill','well','tavern','store'];
 const UPGRADE_COST = { planks:2, stone:2, gold:10 };
-const TAX = { hut:.5, house:1.5 };
+const TAX = { hut:.75, house:2.25 };   // gold per resident per minute
 const STAGES = [
   { pop:0,  unlock:['hut','fisher','lumber','forester','quarry','well','store'] },
   { pop:20, unlock:['field','mill','bakery','sheep','weaver'], msg:'Osada rośnie! Odblokowano pola, młyn, piekarnię, owczarnię i tkalnię.' },
@@ -334,19 +334,19 @@ const EVENTS = [
            { label:'Daj im prowiant na drogę', fx:{ fish:-4, wood:5 }, info:'W podzięce zostawiają łódź na opał.' } ] },
   { id:'storm', title:'Sztorm', text:'Na horyzoncie kłębią się czarne chmury. Fale już biją o brzeg.', when:() => count('fisher')>0,
     opts:[ { label:'Zabezpieczcie łodzie', fx:{ wood:-5 } },
-           { label:'Przeczekamy', fx:{ flags:{ noFish:2 } }, info:'Rybacy nie wypłyną przez 2 dni.' } ] },
+           { label:'Przeczekamy', fx:{ flags:{ noFish:.5 } }, info:'Rybacy nie wypłyną przez pół dnia.' } ] },
   { id:'fever', title:'Gorączka', text:'Kilku mieszkańców złapało gorączkę. Ledwo trzymają się na nogach.', when:() => PLAN.residents>=8,
-    opts:[ { label:'Dzień odpoczynku', fx:{ flags:{ noWork:1 } }, info:'Przez dzień nikt nie pracuje.' },
+    opts:[ { label:'Dzień odpoczynku', fx:{ flags:{ noWork:.2 } }, info:'Przez kilka godzin nikt nie pracuje.' },
            { label:'Pracujemy dalej', fx:{ people:-2 }, info:'Dwoje chorych opuści wyspę.' } ] },
   { id:'carpenter', title:'Wędrowny cieśla', text:'Cieśla z lądu ma na łodzi zapas desek i chętnie je sprzeda.', when:() => true,
     opts:[ { label:'Kup deski', fx:{ gold:-15, planks:6 } }, { label:'Nie trzeba', fx:{} } ] },
   { id:'fire', title:'Pożar lasu', text:'Piorun uderzył w drzewo i ogień zaczyna się rozprzestrzeniać.', when:s => s===1 && grownCount()>=6,
-    opts:[ { label:'Gasić!', fx:{ flags:{ noWork:1 } }, info:'Przez dzień wszyscy gaszą pożar.' }, { label:'Niech się dopali', fx:{ burn:5 }, info:'Spłonie 5 drzew.' } ] },
+    opts:[ { label:'Gasić!', fx:{ flags:{ noWork:.2 } }, info:'Przez kilka godzin wszyscy gaszą pożar.' }, { label:'Niech się dopali', fx:{ burn:5 }, info:'Spłonie 5 drzew.' } ] },
   { id:'crate', title:'Skrzynia na plaży', text:'Fale wyrzuciły na brzeg skrzynię z rozbitego statku.', when:() => true,
     opts:[ { label:'Rozbijcie ją na deski', fx:{ wood:6 } }, { label:'Sprzedajcie zawartość', fx:{ gold:15 } } ] },
   { id:'locusts', title:'Szarańcza', text:'Nad pola nadciąga brzęcząca chmura owadów.', when:s => s<2 && count('field')>0,
-    opts:[ { label:'Wszyscy do pól!', fx:{ flags:{ noLumber:1 } }, info:'Przez dzień drwale i kamieniarze przeganiają owady.' },
-           { label:'Trudno', fx:{ flags:{ noFields:3 } }, info:'Pola nie urodzą przez 3 dni.' } ] },
+    opts:[ { label:'Wszyscy do pól!', fx:{ flags:{ noLumber:.2 } }, info:'Przez kilka godzin drwale i kamieniarze przeganiają owady.' },
+           { label:'Trudno', fx:{ flags:{ noFields:.5 } }, info:'Pola nie urodzą przez pół dnia.' } ] },
   { id:'frost', title:'Siarczysty mróz', text:'Nadchodzi wyjątkowo zimna noc. Morze przy brzegu zamarza.', when:s => s===3,
     opts:[ { label:'Rozpalcie większe ogniska', fx:{ wood:-6 } }, { label:'Jakoś przetrwamy', fx:{ people:-2 }, info:'Dwoje mieszkańców odpłynie na ląd.' } ] },
   { id:'wedding', title:'Wesele', text:'Dwoje mieszkańców bierze ślub. Cała wyspa chce świętować.', when:s => s!==3 && PLAN.residents>=12,
@@ -430,16 +430,16 @@ function desc(k){
     port:   'Tu przypływają nowi osadnicy i statki kupieckie. Przystań mieści 40 sztuk każdego towaru.',
     hut:    `Dom dla 4 osadników. Jedzą ryby albo chleb (${g('fish')} lub ${g('bread')}), a zimą palą drewno. Najedzeni płacą podatki i ściągają kolejnych osadników. Studnia w pobliżu podnosi podatki.`,
     house:  `Dom dla 6 rzemieślników. Potrzebują ryb, chleba i sukna (${g('fish')} ${g('bread')} ${g('cloth')}), a zimą opału. Płacą trzy razy wyższe podatki niż osadnicy.`,
-    fisher: `Łowi ok. 0,5${g('fish')} dziennie za każde pole wody obok (maks. 2). Zimą połowę mniej.`,
-    field:  `Daje 2${g('grain')} dziennie, +0,5 za każde pole zboża obok (maks. +1), latem jeszcze +0,5. Zimą nic.`,
-    mill:   `Miele zboże na mąkę: 3${g('grain')} → 3${g('flour')} dziennie.`,
-    bakery: `Piecze chleb: 2${g('flour')} → 4${g('bread')} dziennie. Chleb syci osadników i jest niezbędny rzemieślnikom.`,
-    lumber: `Ścina drzewa: 0,5${g('wood')} dziennie za każde dorosłe drzewo obok (maks. 2). Co trzecia dostawa to jedno ścięte drzewo, które musi odrosnąć.`,
-    forester:'Sadzi jedno drzewo dziennie na wolnym polu w promieniu 2. Drzewo dorasta po 4 dniach.',
-    quarry: `0,75${g('stone')} dziennie za każdą skałę obok (maks. 3 skały).`,
-    sheep:  `Owce potrzebują pastwiska: 0,25${g('wool')} dziennie za każde wolne pole trawy obok (maks. 1,5).`,
-    weaver: `Tka sukno: 2${g('wool')} → 1${g('cloth')} dziennie. Sukna potrzebują rzemieślnicy.`,
-    sawmill:`Tnie drewno na deski: 2${g('wood')} → 2${g('planks')} dziennie. Deski są potrzebne do domów i karczmy.`,
+    fisher: `Łowi 0,75${g('fish')} na minutę za każde pole wody obok (maks. 3). Zimą połowę mniej.`,
+    field:  `Daje 3${g('grain')} na minutę, +0,5 za każde pole zboża obok (maks. +1), latem jeszcze +1. Zimą nic.`,
+    mill:   `Miele zboże na mąkę: 4${g('grain')} → 4${g('flour')} na minutę.`,
+    bakery: `Piecze chleb: 3${g('flour')} → 6${g('bread')} na minutę. Chleb syci osadników i jest niezbędny rzemieślnikom.`,
+    lumber: `Ścina drzewa: 0,75${g('wood')} na minutę za każde dorosłe drzewo obok (maks. 3). Co trzecia dostawa to jedno ścięte drzewo, które musi odrosnąć.`,
+    forester:'Sadzi jedno drzewo na minutę na wolnym polu w promieniu 2. Drzewo dorasta w 4 minuty.',
+    quarry: `1${g('stone')} na minutę za każdą skałę obok (maks. 3).`,
+    sheep:  `Owce potrzebują pastwiska: 0,4${g('wool')} na minutę za każde wolne pole trawy obok (maks. 2,4).`,
+    weaver: `Tka sukno: 3${g('wool')} → 1,5${g('cloth')} na minutę. Sukna potrzebują rzemieślnicy.`,
+    sawmill:`Tnie drewno na deski: 3${g('wood')} → 3${g('planks')} na minutę. Deski są potrzebne do domów i karczmy.`,
     well:   'Chatki i domy w promieniu 3 pól mają wodę: płacą wyższe podatki. Bez studni chatki nie da się ulepszyć.',
     tavern: 'Rzemieślnicy w promieniu 4 pól mają gdzie się spotkać i płacą wyższe podatki.',
     store:  'Każdy magazyn dodaje 30 miejsca na każdy towar.',
@@ -479,21 +479,21 @@ function around(x,y){
   }
   return n;
 }
-// production cycles per day of a building at a tile
+// production cycles per minute of game time for a building at a tile
 function rateOf(type,x,y,season,F){
   if(F.noWork) return 0;
   const n=around(x,y);
   switch(type){
-    case 'fisher': return F.noFish ? 0 : .5*Math.min(4,n.water)*(season===3?.5:1);
-    case 'field': return season===3 || F.noFields ? 0 : 2 + .5*Math.min(2,n.field) + (season===1?.5:0);
-    case 'mill': return 3;
-    case 'bakery': return 2;
-    case 'lumber': return F.noLumber ? 0 : .5*Math.min(4,n.grown);
+    case 'fisher': return F.noFish ? 0 : .75*Math.min(4,n.water)*(season===3?.5:1);
+    case 'field': return season===3 || F.noFields ? 0 : 3 + .5*Math.min(2,n.field) + (season===1?1:0);
+    case 'mill': return 4;
+    case 'bakery': return 3;
+    case 'lumber': return F.noLumber ? 0 : .75*Math.min(4,n.grown);
     case 'forester': return 1;
-    case 'quarry': return F.noLumber ? 0 : .75*Math.min(3,n.rock);
-    case 'sheep': return n.free>=2 ? .25*Math.min(6,n.free) : 0;
-    case 'weaver': return 1;
-    case 'sawmill': return 2;
+    case 'quarry': return F.noLumber ? 0 : Math.min(3,n.rock);
+    case 'sheep': return n.free>=2 ? .4*Math.min(6,n.free) : 0;
+    case 'weaver': return 1.5;
+    case 'sawmill': return 3;
   }
   return 0;
 }
@@ -520,7 +520,8 @@ function plan(){
   for(const i of jobs){ if(hands<1) break; staffed.add(i); hands--; }
   const rate=new Map();
   for(const i of staffed) rate.set(i, rateOf(S.cells[i].b,i%N,(i/N)|0,season,F));
-  return { season, F, jobs, staffed, rate, idle:jobs.length-staffed.size, hands, beds, residents, crafts, settlers:residents-crafts, cap:capacity() };
+  return { season, F, jobs, staffed, rate, idle:jobs.length-staffed.size, hands, beds, residents, crafts, settlers:residents-crafts, cap:capacity(),
+           nextFlag:Object.values(S.flags).filter(v=>v>S.t).reduce((a,b)=>Math.min(a,b),Infinity) };
 }
 
 /* ================= island ================= */
@@ -1152,7 +1153,7 @@ function nightDark(){
   if(f>=.9 || f<.06) return 1;
   return 1-smooth((f-.06)/.08);
 }
-function produce(dt){
+function produce(dtMin){
   for(const i of PLAN.jobs){
     const c=S.cells[i], b=B[c.b];
     if(!PLAN.staffed.has(i)){ c.stat='staff'; continue; }
@@ -1163,7 +1164,7 @@ function produce(dt){
     if(b.in && Object.entries(b.in).some(([k,v])=>S.goods[k]<v)){ c.stat='input'; continue; }
     if(b.out && S.goods[b.out]+(b.n||1)>PLAN.cap){ c.stat='full'; storageAlert(b.out); continue; }
     c.stat='ok';
-    c.pr=(c.pr||0)+dt*rate;
+    c.pr=(c.pr||0)+dtMin*rate;
     if(c.pr>=1){ c.pr-=1; cycleDone(i,c,b); }
   }
 }
@@ -1207,54 +1208,71 @@ function take(k,amt){
   S.goods[k]-=amt; return true;
 }
 function houseNeeds(c,season){
-  const r=c.res||0, list=c.b==='hut' ? [{ k:'food', amt:r*.25 }] : [{ k:'fish', amt:r*.15 },{ k:'bread', amt:r*.15 },{ k:'cloth', amt:r*.05 }];
+  // what a home eats and burns per minute
+  const r=c.res||0, list=c.b==='hut' ? [{ k:'food', amt:r*.375 }] : [{ k:'fish', amt:r*.225 },{ k:'bread', amt:r*.225 },{ k:'cloth', amt:r*.075 }];
   if(season===3) list.push({ k:'wood', amt:.5, heat:true });
   return list;
 }
 const NEED_NAME = { food:'jedzenia', heat:'opału', fish:'ryb', bread:'chleba', cloth:'sukna' };
-function dailyTick(){
-  const d=day(), season=seasonIdx(d), prev=seasonIdx(d-1);
-  S.cells.forEach(c => { if(c.l && c.b==='tree' && c.g<4){ c.g++; if(c.g>=4) c.st=0; } });
-  PLAN=plan();
-  const homes=[]; S.cells.forEach((c,i) => { if(c.l && c.b && B[c.b].cap) homes.push(i); });
+// the economy runs on game minutes (MIN_PER_DAY of them in a day), independent of day and night
+function consume(dtMin){
+  const season=PLAN.season;
+  S.cells.forEach(c => {
+    if(!c.l || !c.res || !B[c.b].cap) return;
+    for(const n of houseNeeds(c,season)) if(!take(n.k,n.amt*dtMin)){ const k=n.heat?'heat':n.k; c.lack=c.lack||{}; c.lack[k]=(c.lack[k]||0)+dtMin; }
+  });
+}
+function growTrees(dtMin){
+  S.cells.forEach(c => { if(c.l && c.b==='tree' && c.g<4){ c.g=Math.min(4,c.g+dtMin); if(c.g>=4){ c.st=0; dirty=true; } } });
+}
+const merchantHere = () => { const d=day(), f=S.t%1; return seasonIdx(d)!==3 && (d-1)%SEASON_LEN===0 && f>=.25 && f<.8; };
+// every TICK_MIN minutes the settlement settles up: taxes, newcomers, and people who give up and leave
+function settle(){
+  const season=PLAN.season, homes=[];
+  S.cells.forEach((c,i) => { if(c.l && c.b && B[c.b].cap) homes.push(i); });
   homes.sort((a,b)=>S.cells[a].o-S.cells[b].o);
-  let tax=0, left=0; const why={};
+  let tax=0, left=0, came=0; const why={};
   for(const i of homes){
-    const c=S.cells[i], x=i%N, y=(i/N)|0, cap=B[c.b].cap;
+    const c=S.cells[i], x=i%N, y=(i/N)|0, cap=B[c.b].cap, lack=c.lack||{};
     const comf=[covered(x,y,'well')]; if(c.b==='house') comf.push(covered(x,y,'tavern'));
-    c.cov=comf; c.cf=comf.filter(Boolean).length/comf.length;
-    if(!c.res){ c.miss=[]; if(season!==3 && S.goods.fish+S.goods.bread>=1) c.res=1; continue; }
-    const miss=[];
-    for(const n of houseNeeds(c,season)) if(!take(n.k,n.amt)) miss.push(n.heat?'heat':n.k);
+    c.cov=comf; c.cf=comf.filter(Boolean).length/comf.length; c.lack={};
+    if(!c.res){ c.miss=[]; if(season!==3 && S.goods.fish+S.goods.bread>=1){ c.res=1; came++; } continue; }
+    const miss=Object.keys(lack).filter(k=>lack[k]>TICK_MIN*.25);
     c.miss=miss;
-    if(!miss.length){ c.un=0; tax+=c.res*TAX[c.b]*(.6+.4*c.cf); if(c.res<cap && season!==3) c.res++; }
+    if(!miss.length){ c.un=0; tax+=c.res*TAX[c.b]*TICK_MIN*(.6+.4*c.cf); if(c.res<cap && season!==3){ c.res++; came++; } }
     else { c.un=(c.un||0)+1; if(c.un>=2){ c.res--; left++; miss.forEach(m=>{ why[m]=1; }); } }
   }
   S.gold+=tax;
-  if(left) log(`${left===1?'Odeszła 1 osoba':`Odeszło ${left} ${plural(left,'osoba','osoby','osób')}`}: brak ${Object.keys(why).map(k=>NEED_NAME[k]).join(' i ')}.`,'bad');
-  if(season!==prev) log(SEASON_MSG[season], season===3?'warn':'');
-  const dos=(d-1)%SEASON_LEN;
-  if(season===2 && dos===SEASON_LEN-2) log('Zima za 2 dni. Każda chata spali pół drewna dziennie, a pola przestaną rodzić.','warn');
-  if(S.merchant && d>=S.merchant){ S.merchant=0; log('Statek kupiecki odpłynął.'); }
-  if(!S.merchant && dos===1 && season!==3){ S.merchant=d+4; log('Do przystani przypłynął statek kupiecki. Zostanie 4 dni.','good'); Snd.card(); }
+  if(left) log(`${plural(left,'Odeszła 1 osoba',`Odeszły ${left} osoby`,`Odeszło ${left} osób`)}: brak ${Object.keys(why).map(k=>NEED_NAME[k]).join(' i ')}.`,'bad');
   PLAN=plan();
   while(S.stage+1<STAGES.length && PLAN.residents>=STAGES[S.stage+1].pop){ S.stage++; log(STAGES[S.stage].msg,'good'); Snd.fanfare(); }
   if(PLAN.residents===0 && !S.over){ S.over=true; S.queue=[{ kind:'over' }]; }
-  else if(d>6 && Math.random()<.05){
+  else if(S.t>.5 && Math.random()<.08){
     const pool=EVENTS.filter(e=>e.id!==S.lastEvent && e.when(season));
     if(pool.length){ const e=pick(pool); S.queue.push({ kind:'event', id:e.id }); S.lastEvent=e.id; }
   }
-  syncCreatures(true);
+  syncCreatures(came>0);
   save();
   if(S.queue.length) setTimeout(openNextCard,50);
 }
+function dayChange(){
+  const d=day(), season=seasonIdx(d), prev=seasonIdx(d-1);
+  if(season!==prev) log(SEASON_MSG[season], season===3?'warn':'');
+  if(season===2 && (d-1)%SEASON_LEN===SEASON_LEN-1) log('Zima zacznie się jutro. Każda chata spali pół drewna na minutę, a pola przestaną rodzić.','warn');
+  PLAN=plan(); syncCreatures(false);
+}
 function simulate(gdt){
   while(gdt>0){
-    const step=Math.min(gdt,.02), before=Math.floor(S.t);
+    const step=Math.min(gdt,.004), d0=Math.floor(S.t), k0=Math.floor(S.t*MIN_PER_DAY/TICK_MIN), m0=merchantHere();
     S.t+=step; gdt-=step;
-    produce(step);
+    const dm=step*MIN_PER_DAY;
+    produce(dm); consume(dm); growTrees(dm);
+    if(S.t>=PLAN.nextFlag) dirty=true;
     if(dirty){ dirty=false; PLAN=plan(); syncCreatures(false); }
-    if(Math.floor(S.t)>before){ dailyTick(); if(S.queue.length || S.over) break; }
+    if(Math.floor(S.t)>d0) dayChange();
+    const m1=merchantHere();
+    if(m1!==m0){ if(m1){ log('Do przystani przypłynął statek kupiecki. Zostanie do wieczora.','good'); Snd.card(); } else log('Statek kupiecki odpłynął.'); }
+    if(Math.floor(S.t*MIN_PER_DAY/TICK_MIN)>k0){ settle(); if(S.queue.length || S.over) break; }
   }
 }
 
@@ -1431,7 +1449,7 @@ function render(){
     const pos=boatPos(x,y,d,cell.s,t,dark,!working); if(!pos) return;
     addBoat({ x:pos[0], y:pos[1], d, s:cell.s, crew:working && dark<.5 });
   });
-  if(S.merchant && S.port>=0){
+  if(merchantHere() && S.port>=0){
     const x=S.port%N, y=(S.port/N)|0, d=waterDir(x,y);
     if(d){ const bx=x+.5+d[0]*1.75, by=y+.5+d[1]*1.75; if(inb(Math.floor(bx),Math.floor(by)) && isWater(Math.floor(bx),Math.floor(by))) addBoat({ x:bx, y:by, d, s:.3, ship:true }); }
   }
@@ -1665,14 +1683,14 @@ function updateHUD(){
   $('clock').innerHTML=nightDark()>.5?MOON_SVG:SUN_SVG;
   Snd.setMood(s,nightDark()>.5);
   const chips=[];
-  chips.push(`<button class="rchip" type="button" title="Złoto: zapas i podatki na dzień">${I('gold')}<span class="rval"><strong>${Math.floor(S.gold)}</strong><small class="${L.tax>0?'pos':'zero'}">${frs(L.tax)}</small></span></button>`);
+  chips.push(`<button class="rchip" type="button" title="Złoto: zapas i podatki na minutę">${I('gold')}<span class="rval"><strong>${Math.floor(S.gold)}</strong><small class="${L.tax>0?'pos':'zero'}">${frs(L.tax)}</small></span></button>`);
   const popWarn=PLAN.idle>0, freeBeds=PLAN.beds-PLAN.residents;
   chips.push(`<button class="rchip${popWarn?' warn':''}" type="button" title="Osadnicy i wolne łóżka">${I('pop')}<span class="rval"><strong>${PLAN.settlers}</strong><small class="${popWarn?'neg':'zero'}">${popWarn?`brak rąk: ${PLAN.idle}`:`łóżka: ${freeBeds}`}</small></span></button>`);
   if(unlocked('upgrade') || PLAN.crafts) chips.push(`<button class="rchip" type="button" title="Rzemieślnicy">${I('pop2')}<span class="rval"><strong>${PLAN.crafts}</strong><small class="zero">rzemieślnicy</small></span></button>`);
   chips.push('<span class="rsep"></span>');
   for(const k of visibleGoods()){
     const net=L.prod[k]-L.use[k], v=Math.floor(S.goods[k]), warn=net<0 && S.goods[k]+net*2<0;
-    chips.push(`<button class="rchip${warn?' warn':''}" type="button" title="${GOODS[k].name}: zapas i zmiana na dzień">${I(k)}<span class="rval"><strong>${v}</strong><small class="${net>.049?'pos':net<-.049?'neg':'zero'}">${frs(net)}</small></span></button>`);
+    chips.push(`<button class="rchip${warn?' warn':''}" type="button" title="${GOODS[k].name}: zapas i zmiana na minutę">${I(k)}<span class="rval"><strong>${v}</strong><small class="${net>.049?'pos':net<-.049?'neg':'zero'}">${frs(net)}</small></span></button>`);
   }
   const bar=$('resBar'), html=chips.join('');
   if(bar._h!==html){ const sl=bar.scrollLeft; bar._h=html; bar.innerHTML=html; bar.scrollLeft=sl; bar.querySelectorAll('.rchip').forEach(b => b.addEventListener('click', openLedger)); }
@@ -1689,7 +1707,7 @@ function advice(){
   if(!count('lumber')) return 'Postaw <b>drwala</b> przy lesie, żeby mieć drewno. Leśniczy posadzi nowe drzewa.';
   if(PLAN.idle>0) return '<b>Brakuje rąk do pracy.</b> Zbuduj chatkę albo wstrzymaj mniej ważny budynek.';
   if(PLAN.beds-PLAN.residents<=0 && PLAN.season!==3) return 'Wszystkie chatki są pełne. Nowa chatka ściągnie kolejnych osadników.';
-  if(PLAN.season===2) return `<b>Jesień.</b> Zimą każda chata pali pół drewna dziennie. Odłóż zapas ${I('wood')} i ${I('fish')}.`;
+  if(PLAN.season===2) return `<b>Jesień.</b> Zimą każda chata pali pół drewna na minutę. Odłóż zapas ${I('wood')} i ${I('fish')}.`;
   const next=STAGES[S.stage+1];
   if(next && next.soon) return `Następny krok: <b>${next.soon}</b>. W przygotowaniu.`;
   if(next) return `Przy <b>${next.pop} mieszkańcach</b> odblokujesz: ${next.unlock.map(k=>k==='upgrade'?'domy rzemieślników':B[k].name.toLowerCase()).join(', ')}.`;
@@ -1697,7 +1715,7 @@ function advice(){
 }
 function updateTicker(){
   const last=S.log[S.log.length-1], el=$('ticker');
-  const fresh=last && S.t-last.t<1.5;
+  const fresh=last && S.t-last.t<.2;
   const html=fresh ? `<span class="tk-day">dzień ${last.d}</span><span>${last.text}</span>` : `<span class="tk-day">rada</span><span>${advice()}</span>`;
   if(el._h!==html){ el._h=html; el.innerHTML=html; el.className='ticker'+(fresh&&last.k?' '+last.k:''); }
 }
@@ -1735,8 +1753,7 @@ function renderSheet(){
       body.innerHTML=`<p class="desc">Wycięte drzewo da od razu 1${I('wood')} i zwolni miejsce pod budowę. Las przyciąga sarny.</p><div class="sheet-actions"><button class="btn primary" id="actCut" type="button">Wytnij drzewo (+1${I('wood')})</button></div>`;
       $('actCut').addEventListener('click', () => { c.b=null; c.st=0; S.goods.wood=Math.min(PLAN.cap,S.goods.wood+1); burst(x,y); floaters.push(floater(x,y,[['wood',1]],.1,1.6)); Snd.build(); refresh(); });
     } else {
-      const n=4-c.g;
-      head('sapling','Sadzonka',`Dorośnie za ${n} ${plural(n,'dzień','dni','dni')}.`);
+      head('sapling','Sadzonka',`Dorośnie za ok. ${Math.max(1,Math.ceil(4-c.g))} min.`);
       body.innerHTML='<p class="desc">Młode drzewko. Drwal może je ściąć dopiero, gdy dorośnie.</p>';
     }
     return;
@@ -1760,7 +1777,7 @@ function statusText(c,i){
   }
   if(c.b==='tavern') return 'Karczmarz czeka na gości';
   const r=PLAN.rate.get(i)||0;
-  return c.b==='forester' ? 'Sadzi drzewa' : `Daje ok. ${fr(r*(b.n||1))}${I(b.out)} dziennie`;
+  return c.b==='forester' ? 'Sadzi drzewa' : `Daje ok. ${fr(r*(b.n||1))}${I(b.out)} na minutę`;
 }
 function demolishHtml(c,refund){
   return `<button class="btn danger${demolishArm?' armed':''}" id="actDemolish" type="button">${demolishArm?'Na pewno? Rozbierz':'Rozbierz'}${Object.keys(refund).length?` (zwrot ${costHtml(refund)})`:''}</button>`;
@@ -1807,7 +1824,7 @@ function renderHome(x,y,c,head,body){
   if(tier===2) h+=needRow(tav,'Karczma w zasięgu','podatki');
   h+='</ul>';
   const tax=r*TAX[c.b]*(.6+.4*(c.cf||0));
-  h+=`<p class="status">${miss.length?'<span class="neg">Bez podatków, dopóki czegoś brakuje.</span>':`Podatki: ok. ${fr(tax)}${I('gold')} dziennie`}</p>`;
+  h+=`<p class="status">${miss.length?'<span class="neg">Bez podatków, dopóki czegoś brakuje.</span>':`Podatki: ok. ${fr(tax)}${I('gold')} na minutę`}</p>`;
   if(c.b==='hut'){
     if(unlocked('upgrade')){
       const full=r>=cap, fed=!miss.length, ok=full && fed && well && has(UPGRADE_COST);
@@ -1830,14 +1847,16 @@ function renderHome(x,y,c,head,body){
   });
   wireDemolish(x,y,c,refund);
 }
-function nextMerchantDay(){
-  for(let d=day()+1; d<day()+30; d++) if((d-1)%SEASON_LEN===1 && seasonIdx(d)!==3) return d;
-  return 0;
+function nextMerchantText(){
+  const d=day(), s2=seasonIdx(d);
+  if(s2!==3 && (d-1)%SEASON_LEN===0 && S.t%1<.25) return 'dziś rano';
+  let n=s2; do { n=(n+1)%4; } while(n===3);
+  return ['wiosną','latem','jesienią'][n];
 }
 function renderPort(head,body){
-  head('port','Przystań', S.merchant ? `Statek kupiecki w porcie do dnia ${S.merchant}` : 'Tu przypływają statki');
+  head('port','Przystań', merchantHere() ? 'Statek kupiecki czeka w porcie do wieczora' : 'Tu przypływają statki');
   let h=`<p class="desc">${desc('port')} Każdy magazyn dodaje 30 miejsca. Teraz: <b>${PLAN.cap}</b> na każdy towar.</p>`;
-  if(S.merchant){
+  if(merchantHere()){
     h+=`<p class="status">Handel z kupcem (po 5 sztuk):</p>`;
     for(const k of visibleGoods()){
       const sell=GOODS[k].val*5, buy=Math.ceil(GOODS[k].val*1.6)*5;
@@ -1846,8 +1865,7 @@ function renderPort(head,body){
         <button class="btn" type="button" data-buy="${k}" ${S.gold>=buy && S.goods[k]+5<=PLAN.cap?'':'disabled'}>Kup −${buy}${I('gold')}</button></div>`;
     }
   } else {
-    const d=nextMerchantDay();
-    h+=`<p class="status">Następny statek kupiecki: ${d?`${SEASONS[seasonIdx(d)].toLowerCase()}, dzień ${(d-1)%SEASON_LEN+1}${yearOf(d)!==yearOf(day())?`, rok ${yearOf(d)}`:''}`:'wiosną'}.</p><p class="hintline">Kupcy przypływają na początku każdej pory roku poza zimą.</p>`;
+    h+=`<p class="status">Następny statek kupiecki: ${nextMerchantText()}.</p><p class="hintline">Kupcy przypływają rano pierwszego dnia każdej pory roku poza zimą i zostają do wieczora.</p>`;
   }
   body.innerHTML=h;
   body.querySelectorAll('[data-sell]').forEach(b => b.addEventListener('click', () => { const k=b.dataset.sell; if(S.goods[k]<5) return; S.goods[k]-=5; S.gold+=GOODS[k].val*5; Snd.coin(); refresh(); }));
@@ -1861,11 +1879,11 @@ function optionEffect(k,x,y,n){
     let homes=0; for(let dy=-b.radius;dy<=b.radius;dy++) for(let dx=-b.radius;dx<=b.radius;dx++){ const c=cellAt(x+dx,y+dy); if(c && c.l && c.b && B[c.b].cap) homes++; }
     return [`zasięg ${b.radius} pola · ${homes} ${plural(homes,'dom','domy','domów')} w zasięgu`, !homes];
   }
-  if(k==='forester') return ['sadzi drzewo dziennie w promieniu 2', false];
+  if(k==='forester') return ['sadzi drzewo co minutę w promieniu 2', false];
   let r=rateOf(k,x,y,season,{});
-  if(k==='field' && season===3) return [`zimą nic, wiosną ok. ${fr(rateOf(k,x,y,0,{}))}${I('grain')} dziennie`, true];
+  if(k==='field' && season===3) return [`zimą nic, wiosną ok. ${fr(rateOf(k,x,y,0,{}))}${I('grain')} na minutę`, true];
   if(!r) return [k==='lumber'?'brak drzew obok: postaw obok leśniczego':k==='sheep'?'za mało wolnej trawy wokół':'tu nic nie zbierze', true];
-  let s=`ok. ${fr(r*(b.n||1))}${I(b.out)} dziennie`;
+  let s=`ok. ${fr(r*(b.n||1))}${I(b.out)} na minutę`;
   if(b.in) s+=` z ${Object.entries(b.in).map(([g,v])=>`${fr(r*v)}${I(g)}`).join(' ')}`;
   return [s, false];
 }
@@ -1946,7 +1964,7 @@ function applyFx(fx){
     else if(GOODS[k]) S.goods[k]=clamp(S.goods[k]+v,0,PLAN.cap);
   }
   if(fx.people) movePeople(fx.people);
-  if(fx.flags) for(const k in fx.flags) S.flags[k]=Math.max(S.flags[k]||0,Math.floor(S.t)+fx.flags[k]);
+  if(fx.flags) for(const k in fx.flags) S.flags[k]=Math.max(S.flags[k]||0,S.t+fx.flags[k]);
   if(fx.burn) shuffle(S.cells.filter(c=>c.l && c.b==='tree' && c.g>=4),Math.random).slice(0,fx.burn).forEach(c => { c.b=null; c.st=0; });
 }
 function showCard(kicker,title,text,choices){
@@ -1980,8 +1998,10 @@ function openNextCard(){
 function openLedger(){
   const L=ledger();
   const stat=(label,val) => `<div class="stat"><span>${label}</span><strong>${val}</strong></div>`;
-  let h=`<div class="stats">${stat('Osadnicy',PLAN.settlers)}${stat('Rzemieślnicy',PLAN.crafts)}${stat('Pracują',`${PLAN.staffed.size}/${PLAN.jobs.length}`)}${stat('Wolne łóżka',PLAN.beds-PLAN.residents)}${stat('Podatki / dzień',fr(L.tax))}${stat('Domy z brakami',L.missing)}</div>`;
-  h+=`<h3>Towary (miejsca w magazynie: ${PLAN.cap} na każdy)</h3><div class="table-wrap"><table class="ledger"><thead><tr><th>Towar</th><th>Zapas</th><th>Produkcja</th><th>Zużycie</th><th>Bilans / dzień</th></tr></thead><tbody>`;
+  let h=`<div class="stats">${stat('Osadnicy',PLAN.settlers)}${stat('Rzemieślnicy',PLAN.crafts)}${stat('Pracują',`${PLAN.staffed.size}/${PLAN.jobs.length}`)}${stat('Wolne łóżka',PLAN.beds-PLAN.residents)}${stat('Podatki / min',fr(L.tax))}${stat('Domy z brakami',L.missing)}</div>`;
+  const rem=TICK_MIN-(S.t*MIN_PER_DAY)%TICK_MIN, secs=Math.ceil(rem*60/S.speed);
+  h+=`<p class="hintline" style="margin-top:10px">Ludzie jedzą na bieżąco. Co ${TICK_MIN} minuty osada się rozlicza: podatki, nowi mieszkańcy, odejścia. Następne rozliczenie za ${secs} s${S.paused?' (gra stoi)':''}.</p>`;
+  h+=`<h3>Towary (miejsca w magazynie: ${PLAN.cap} na każdy)</h3><div class="table-wrap"><table class="ledger"><thead><tr><th>Towar</th><th>Zapas</th><th>Produkcja / min</th><th>Zużycie / min</th><th>Bilans / min</th></tr></thead><tbody>`;
   for(const k of visibleGoods()){
     const net=L.prod[k]-L.use[k];
     h+=`<tr><td>${I(k)}${GOODS[k].name}</td><td>${Math.floor(S.goods[k])}</td><td>${fr(L.prod[k])}</td><td>${fr(L.use[k])}</td><td class="${net>.049?'pos':net<-.049?'neg':'zero'}">${frs(net)}</td></tr>`;
@@ -2006,8 +2026,9 @@ function newGame(){
   const rng=mulberry32((Math.random()*4294967295)>>>0), g=genIsland(rng);
   S={ v:4, n:N, cells:g.cells, port:g.port, t:.3, speed:1, paused:false, gold:40, order:2, flags:{}, stage:0,
       goods:{ fish:12, bread:0, grain:0, flour:0, wood:25, planks:0, stone:8, wool:0, cloth:0 },
-      log:[], merchant:0, lastEvent:null, queue:[], over:false, alerts:{} };
+      log:[], lastEvent:null, queue:[], over:false, alerts:{} };
   log('Wylądowaliście na Zielonej Zatoce. Czworo osadników, przystań i jedna chatka. Reszta zależy od ciebie.','good');
+  log('Przy przystani cumuje statek kupiecki. Zostanie do wieczora, potem wróci latem.');
   postLoad(); save();
 }
 function postLoad(){
