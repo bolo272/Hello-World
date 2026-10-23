@@ -1,0 +1,636 @@
+<title>Kostki Magia i Miecz</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;800&family=Grenze+Gotisch:wght@600&display=swap">
+<style>
+  /* Layout: one narrow column lying on a green gaming-table felt; the dice tray is the focal point */
+  :root {
+    --felt: #17402f;
+    --felt-deep: #0b2118;
+    --panel: rgba(4, 18, 12, .38);
+    --line: rgba(240, 232, 214, .16);
+    --ink: #f0e8d6;
+    --muted: #a9bdac;
+    --bone: #f6f0e1;
+    --bone-shade: #d8cdb4;
+    --pip: #8f1d1d;
+    --brass: #d4a94b;
+    --brass-deep: #8a6823;
+    --brass-ink: #2a1d05;
+    --win: #92d6a1;
+    --lose: #f2907f;
+    --tie: #ead47f;
+    --f-display: "Grenze Gotisch", "UnifrakturMaguntia", Georgia, serif;
+    --f-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  html { background: var(--felt-deep); }
+  body {
+    background: radial-gradient(130% 70% at 50% 0%, var(--felt) 0%, var(--felt-deep) 80%) no-repeat, var(--felt-deep);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 22px;
+  }
+
+  .eyebrow {
+    margin: 0;
+    color: var(--muted);
+    font-size: .78rem;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  h1, h2 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.6rem, 11vw, 3.6rem); line-height: 1; color: var(--ink); }
+  h2 { font-size: 1.6rem; line-height: 1.1; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    display: grid;
+    gap: 18px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  /* Segmented pickers */
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .seg-label { color: var(--muted); font-size: .9rem; margin-right: 4px; }
+  .seg button {
+    font: inherit;
+    font-weight: 800;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .seg button:hover { border-color: var(--muted); }
+  #count { gap: 5px; }
+  #count button { min-width: 36px; height: 36px; padding: 0; }
+  @media (max-width: 420px) { .seg-label { display: none; } }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--felt-deep); border-color: var(--ink); }
+
+  /* Dice */
+  .tray {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    padding: 22px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .22);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, .45);
+  }
+  .die {
+    --size: clamp(54px, 15vw, 70px);
+    width: var(--size);
+    height: var(--size);
+    padding: calc(var(--size) * .14);
+    border: 0;
+    border-radius: 22%;
+    background: linear-gradient(145deg, var(--bone) 35%, var(--bone-shade));
+    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .14), 0 7px 14px rgba(0, 0, 0, .4);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    flex: none;
+  }
+  button.die { cursor: pointer; }
+  button.die:hover { transform: translateY(-2px); }
+  .die.small { --size: 46px; }
+  .pip {
+    width: 72%;
+    aspect-ratio: 1;
+    place-self: center;
+    border-radius: 50%;
+    background: var(--pip);
+    box-shadow: inset 0 2px 2px rgba(0, 0, 0, .35);
+    visibility: hidden;
+  }
+  .pip.on { visibility: visible; }
+  .die.rolling { animation: tumble .55s cubic-bezier(.3, .7, .4, 1); }
+  @keyframes tumble {
+    0%   { transform: translateY(-14px) rotate(-160deg) scale(.85); }
+    60%  { transform: translateY(3px) rotate(14deg) scale(1.03); }
+    100% { transform: none; }
+  }
+
+  .result {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .result-label { color: var(--muted); font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; }
+  .sum {
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    min-width: 1.4ch;
+  }
+  .detail { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; }
+
+  .btn-main {
+    font: inherit;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    width: 100%;
+    padding: 14px 18px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--brass);
+    color: var(--brass-ink);
+    box-shadow: 0 4px 0 var(--brass-deep);
+    cursor: pointer;
+  }
+  .btn-main:hover { filter: brightness(1.06); }
+  .btn-main:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--brass-deep); }
+
+  .hint { margin: 0; color: var(--muted); font-size: .92rem; }
+  kbd {
+    font: inherit;
+    font-size: .85em;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  /* Combat */
+  .fighters {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+  .fighter { display: grid; gap: 10px; justify-items: center; min-width: 0; text-align: center; }
+  .fighter-name { font-weight: 800; }
+  .vs { font-family: var(--f-display); font-size: 1.5rem; color: var(--muted); padding-top: 52px; }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper button {
+    font: inherit;
+    font-weight: 800;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .stepper button:hover { border-color: var(--muted); }
+  .stepper input {
+    font: inherit;
+    font-weight: 800;
+    font-size: 1.15rem;
+    width: 3.2ch;
+    min-width: 44px;
+    text-align: center;
+    padding: 4px 2px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, .25);
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .stat-label { color: var(--muted); font-size: .85rem; }
+  .total { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .total b { color: var(--ink); font-size: 1.5rem; }
+
+  .verdict {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    font-weight: 500;
+  }
+  .verdict b { display: block; font-size: 1.15rem; }
+  .verdict[data-out="win"] { border-color: var(--win); }
+  .verdict[data-out="win"] b { color: var(--win); }
+  .verdict[data-out="lose"] { border-color: var(--lose); }
+  .verdict[data-out="lose"] b { color: var(--lose); }
+  .verdict[data-out="tie"] { border-color: var(--tie); }
+  .verdict[data-out="tie"] b { color: var(--tie); }
+
+  /* History */
+  .history { display: grid; gap: 10px; padding-inline: 4px; }
+  .link-btn {
+    font: inherit;
+    font-size: .9rem;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .hist li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .hist li span:last-child { min-width: 0; }
+  .tag {
+    flex: none;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    width: 5.6em;
+  }
+  .empty { color: var(--muted); margin: 0; }
+
+  :focus-visible { outline: 3px solid var(--brass); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .die.rolling { animation: none; }
+    button.die:hover { transform: none; }
+  }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Talisman · kostki K6</p>
+    <h1>Magia i Miecz</h1>
+  </header>
+
+  <section class="panel" aria-labelledby="roll-h">
+    <div class="row">
+      <h2 id="roll-h">Rzut</h2>
+      <div class="seg" id="count" role="group" aria-label="Liczba kostek">
+        <span class="seg-label">Kostki</span>
+      </div>
+    </div>
+
+    <div class="tray" id="tray"></div>
+
+    <div class="result" aria-live="polite">
+      <span class="result-label">Suma</span>
+      <output class="sum" id="sum">–</output>
+      <span class="detail" id="detail"></span>
+    </div>
+
+    <button class="btn-main" id="roll" type="button">Rzuć</button>
+    <p class="hint">Ruch to zwykle 1 kostka. Kliknij pojedynczą kostkę, żeby ją przerzucić, np. za punkt Losu. Na komputerze rzucasz też <kbd>spacją</kbd>.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="fight-h">
+    <div class="row">
+      <h2 id="fight-h">Walka</h2>
+      <div class="seg" id="mode" role="group" aria-label="Rodzaj walki">
+        <button type="button" data-mode="sila" aria-pressed="true">Siła</button>
+        <button type="button" data-mode="moc" aria-pressed="false">Moc</button>
+      </div>
+    </div>
+
+    <div class="fighters">
+      <div class="fighter">
+        <span class="fighter-name">Ty</span>
+        <label class="stat-label" for="you-stat"><span class="stat-name">Siła</span> z bonusami</label>
+        <div class="stepper">
+          <button type="button" data-target="you-stat" data-step="-1" aria-label="Zmniejsz">−</button>
+          <input id="you-stat" type="number" inputmode="numeric" min="0" max="99" value="4">
+          <button type="button" data-target="you-stat" data-step="1" aria-label="Zwiększ">+</button>
+        </div>
+        <div id="you-die"></div>
+        <span class="total" id="you-total"></span>
+      </div>
+
+      <span class="vs" aria-hidden="true">vs</span>
+
+      <div class="fighter">
+        <span class="fighter-name">Przeciwnik</span>
+        <label class="stat-label" for="foe-stat"><span class="stat-name">Siła</span> wroga</label>
+        <div class="stepper">
+          <button type="button" data-target="foe-stat" data-step="-1" aria-label="Zmniejsz">−</button>
+          <input id="foe-stat" type="number" inputmode="numeric" min="0" max="99" value="3">
+          <button type="button" data-target="foe-stat" data-step="1" aria-label="Zwiększ">+</button>
+        </div>
+        <div id="foe-die"></div>
+        <span class="total" id="foe-total"></span>
+      </div>
+    </div>
+
+    <button class="btn-main" id="fight" type="button">Walcz</button>
+    <p class="verdict" id="verdict" aria-live="polite"><b>Gotowy do walki</b>Każdy rzuca 1 kostką i dodaje swoją Siłę (albo Moc w walce psychicznej). Wyższy wynik wygrywa.</p>
+  </section>
+
+  <section class="history" aria-labelledby="hist-h">
+    <div class="row">
+      <h2 id="hist-h">Ostatnie rzuty</h2>
+      <button type="button" class="link-btn" id="clear">Wyczyść</button>
+    </div>
+    <ol class="hist" id="hist"></ol>
+    <p class="empty" id="empty">Tu pojawią się Twoje rzuty.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const PIPS = { 0: [], 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  const STORE = "mim-kostki";
+  const HIST_MAX = 12;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Uczciwa kostka: odrzucamy wartości >= 252, żeby każda ścianka miała równe szanse.
+  function d6() {
+    const a = new Uint8Array(1);
+    do { crypto.getRandomValues(a); } while (a[0] >= 252);
+    return (a[0] % 6) + 1;
+  }
+
+  function kostki(n) {
+    if (n === 1) return "kostka";
+    if (n >= 2 && n <= 4) return "kostki";
+    return "kostek";
+  }
+
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; }
+  })();
+
+  const state = {
+    count: Math.min(6, Math.max(1, saved.count || 1)),
+    mode: saved.mode === "moc" ? "moc" : "sila",
+    stats: saved.stats || { sila: { you: 4, foe: 3 }, moc: { you: 3, foe: 2 } },
+    values: [],
+    history: [],
+    busy: false,
+  };
+
+  function save() {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({ count: state.count, mode: state.mode, stats: state.stats }));
+    } catch { /* bez pamięci też działa */ }
+  }
+
+  // --- Kostki ---
+  function makeDie(asButton) {
+    const el = document.createElement(asButton ? "button" : "div");
+    el.className = "die";
+    if (asButton) el.type = "button";
+    else { el.classList.add("small"); el.setAttribute("role", "img"); }
+    for (let i = 0; i < 9; i++) {
+      const p = document.createElement("span");
+      p.className = "pip";
+      el.appendChild(p);
+    }
+    return el;
+  }
+
+  function setFace(el, v) {
+    const on = PIPS[v];
+    el.querySelectorAll(".pip").forEach((p, i) => p.classList.toggle("on", on.includes(i)));
+    el.dataset.value = v;
+    const label = v ? `Kostka: ${v}` : "Kostka jeszcze nie rzucona";
+    el.setAttribute("aria-label", el.tagName === "BUTTON" && v ? `${label}. Kliknij, żeby przerzucić` : label);
+  }
+
+  function animate(els, finals, done) {
+    if (reduceMotion) {
+      els.forEach((el, i) => setFace(el, finals[i]));
+      done();
+      return;
+    }
+    state.busy = true;
+    els.forEach((el) => {
+      el.classList.remove("rolling");
+      void el.offsetWidth;
+      el.classList.add("rolling");
+    });
+    let ticks = 0;
+    const id = setInterval(() => {
+      els.forEach((el) => setFace(el, 1 + Math.floor(Math.random() * 6)));
+      if (++ticks >= 8) {
+        clearInterval(id);
+        els.forEach((el, i) => setFace(el, finals[i]));
+        state.busy = false;
+        done();
+      }
+    }, 65);
+  }
+
+  // --- Główny rzut ---
+  const tray = $("#tray");
+  const countBox = $("#count");
+
+  for (let n = 1; n <= 6; n++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = n;
+    b.dataset.count = n;
+    b.setAttribute("aria-label", `${n} ${kostki(n)}`);
+    countBox.appendChild(b);
+  }
+
+  function renderCount() {
+    countBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.count === state.count)));
+    $("#roll").textContent = state.count === 1 ? "Rzuć kością" : `Rzuć ${state.count} kośćmi`;
+  }
+
+  function renderTray() {
+    tray.replaceChildren();
+    state.values.forEach((v, i) => {
+      const el = makeDie(true);
+      setFace(el, v);
+      el.addEventListener("click", () => reroll(i));
+      tray.appendChild(el);
+    });
+  }
+
+  function renderSum() {
+    const rolled = state.values.every((v) => v > 0);
+    if (!rolled) {
+      $("#sum").textContent = "–";
+      $("#detail").textContent = "Rzuć, żeby zobaczyć wynik";
+      return;
+    }
+    const total = state.values.reduce((a, b) => a + b, 0);
+    $("#sum").textContent = total;
+    $("#detail").textContent = state.values.length > 1 ? state.values.join(" + ") : "";
+  }
+
+  function roll() {
+    if (state.busy) return;
+    state.values = Array.from({ length: state.count }, d6);
+    const finals = state.values.slice();
+    animate([...tray.children], finals, () => {
+      renderSum();
+      const total = finals.reduce((a, b) => a + b, 0);
+      const text = finals.length > 1 ? `${finals.join(" + ")} = ${total}` : `${total}`;
+      addHistory("Rzut", `${finals.length} ${kostki(finals.length)}: ${text}`);
+    });
+  }
+
+  function reroll(i) {
+    if (state.busy) return;
+    if (!state.values.every((v) => v > 0)) { roll(); return; }
+    const before = state.values[i];
+    state.values[i] = d6();
+    animate([tray.children[i]], [state.values[i]], () => {
+      renderSum();
+      const total = state.values.reduce((a, b) => a + b, 0);
+      addHistory("Przerzut", `${before} → ${state.values[i]}` + (state.values.length > 1 ? `, suma ${total}` : ""));
+    });
+  }
+
+  countBox.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-count]");
+    if (!b || state.busy) return;
+    state.count = +b.dataset.count;
+    state.values = Array(state.count).fill(0);
+    renderCount();
+    renderTray();
+    renderSum();
+    save();
+  });
+
+  $("#roll").addEventListener("click", roll);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code !== "Space" || e.target.closest("button, input, label")) return;
+    e.preventDefault();
+    roll();
+  });
+
+  // --- Walka ---
+  const youDie = makeDie(false);
+  const foeDie = makeDie(false);
+  $("#you-die").appendChild(youDie);
+  $("#foe-die").appendChild(foeDie);
+  setFace(youDie, 0);
+  setFace(foeDie, 0);
+
+  const statInput = { you: $("#you-stat"), foe: $("#foe-stat") };
+
+  function renderMode() {
+    document.querySelectorAll("#mode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+    document.querySelectorAll(".stat-name").forEach((s) => (s.textContent = state.mode === "moc" ? "Moc" : "Siła"));
+    statInput.you.value = state.stats[state.mode].you;
+    statInput.foe.value = state.stats[state.mode].foe;
+  }
+
+  function readStat(who) {
+    const v = Math.max(0, Math.min(99, parseInt(statInput[who].value, 10) || 0));
+    statInput[who].value = v;
+    state.stats[state.mode][who] = v;
+    return v;
+  }
+
+  $("#mode").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]");
+    if (!b) return;
+    state.mode = b.dataset.mode;
+    renderMode();
+    save();
+  });
+
+  document.querySelectorAll(".stepper button").forEach((b) => {
+    b.addEventListener("click", () => {
+      const input = document.getElementById(b.dataset.target);
+      input.value = (parseInt(input.value, 10) || 0) + +b.dataset.step;
+      readStat(b.dataset.target === "you-stat" ? "you" : "foe");
+      save();
+    });
+  });
+  Object.entries(statInput).forEach(([who, input]) => input.addEventListener("change", () => { readStat(who); save(); }));
+
+  $("#fight").addEventListener("click", () => {
+    if (state.busy) return;
+    const you = readStat("you");
+    const foe = readStat("foe");
+    const r1 = d6();
+    const r2 = d6();
+    animate([youDie, foeDie], [r1, r2], () => {
+      const a = you + r1;
+      const b = foe + r2;
+      $("#you-total").innerHTML = `${r1} + ${you} = <b>${a}</b>`;
+      $("#foe-total").innerHTML = `${r2} + ${foe} = <b>${b}</b>`;
+      const v = $("#verdict");
+      let out, title, body;
+      if (a > b) { out = "win"; title = "Wygrywasz!"; body = "Potwór ginie, a postać innego gracza traci 1 Życie."; }
+      else if (a < b) { out = "lose"; title = "Przegrywasz"; body = "Tracisz 1 Życie (chyba że coś Cię ochroni)."; }
+      else { out = "tie"; title = "Remis"; body = "Nikt nie traci Życia, walka kończy się bez rozstrzygnięcia."; }
+      v.dataset.out = out;
+      v.innerHTML = `<b>${title}</b>${body}`;
+      addHistory("Walka", `${state.mode === "moc" ? "Moc, " : ""}${a} vs ${b}: ${title.replace("!", "").toLowerCase()}`);
+    });
+    save();
+  });
+
+  // --- Historia ---
+  function addHistory(tag, text) {
+    state.history.unshift({ tag, text });
+    state.history.length = Math.min(state.history.length, HIST_MAX);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = $("#hist");
+    list.replaceChildren(...state.history.map((h) => {
+      const li = document.createElement("li");
+      const t = document.createElement("span");
+      t.className = "tag";
+      t.textContent = h.tag;
+      const s = document.createElement("span");
+      s.textContent = h.text;
+      li.append(t, s);
+      return li;
+    }));
+    $("#empty").hidden = state.history.length > 0;
+    $("#clear").hidden = state.history.length === 0;
+  }
+
+  $("#clear").addEventListener("click", () => {
+    state.history = [];
+    renderHistory();
+  });
+
+  // --- Start: od razu widać przykładowy rzut ---
+  state.values = Array.from({ length: state.count }, d6);
+  renderCount();
+  renderTray();
+  renderSum();
+  renderMode();
+  renderHistory();
+})();
+</script>
