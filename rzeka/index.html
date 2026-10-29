@@ -1,0 +1,1142 @@
+<title>Rzeka</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,700;1,500;1,700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Układ: mapa doliny jak arkusz na stole kartografa, obok wąski notes z łopatą i dziennikiem */
+:root {
+  --bg: #E3E9E6;
+  --paper: #F4F7F5;
+  --ink: #1B282C;
+  --muted: #586669;
+  --line: #C5D0CC;
+  --accent: #1D6886;
+  --accent-ink: #F4F7F5;
+  --accent-soft: #D4E5EB;
+  --earth: #8A6234;
+  --alert: #B0452D;
+  --good: #3D7A45;
+  --shadow: rgba(20, 35, 40, 0.28);
+  --font-display: "Alegreya", Georgia, "Times New Roman", serif;
+  --font-ui: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101A1C; --paper: #172326; --ink: #E0E8E6; --muted: #92A3A3; --line: #2B3B3E;
+    --accent: #63B4D0; --accent-ink: #0E1A1D; --accent-soft: #1C3640; --earth: #D0A46C;
+    --alert: #E57B62; --good: #7FBF86; --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101A1C; --paper: #172326; --ink: #E0E8E6; --muted: #92A3A3; --line: #2B3B3E;
+  --accent: #63B4D0; --accent-ink: #0E1A1D; --accent-soft: #1C3640; --earth: #D0A46C;
+  --alert: #E57B62; --good: #7FBF86; --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
+
+.app {
+  display: flex; flex-direction: column; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 16px;
+}
+@media (min-width: 861px) {
+  html, body { height: 100%; }
+  .app { height: 100%; }
+}
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; }
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 2.1rem; line-height: 1; letter-spacing: -0.01em; }
+.valley-id { color: var(--muted); font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+
+.season { display: flex; flex-direction: column; gap: 5px; min-width: 210px; }
+.season-label { font-family: var(--font-display); font-size: 1.12rem; line-height: 1.1; }
+.season-label b { font-weight: 700; }
+.season-track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.season-track span { position: relative; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.season-track i { position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+.season-names { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+
+.speed { margin-left: auto; display: flex; gap: 4px; }
+.btn {
+  font: inherit; font-weight: 500; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .tool:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.quiet { background: transparent; }
+
+.stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
+.mapwrap { min-width: 0; min-height: 0; display: flex; justify-content: center; align-items: flex-start; }
+.mapframe { position: relative; }
+#map {
+  display: block; touch-action: none; cursor: crosshair; border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--line), 0 14px 30px -18px var(--shadow);
+}
+
+.panel { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 18px; }
+.panel h2 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  font: inherit; font-weight: 700; font-size: 1rem; text-align: left; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+}
+.tool svg { width: 24px; height: 24px; flex: none; }
+.tool small { display: block; font-weight: 400; font-size: 0.75rem; color: var(--muted); }
+.tool[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.tool-note { margin: 8px 0 0; font-size: 0.86rem; color: var(--muted); }
+
+.supplies { display: grid; gap: 10px; }
+.supply { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; }
+.supply .k { color: var(--muted); }
+.supply .v { font-variant-numeric: tabular-nums; font-weight: 700; }
+.meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--earth); transform-origin: left; }
+.meter.energy i { background: var(--accent); }
+
+.facts { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.facts div { min-width: 0; }
+.facts dt { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 0; font-family: var(--font-display); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+.journal { flex: 1; min-height: 120px; display: flex; flex-direction: column; }
+.journal ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.journal li { padding-left: 12px; border-left: 2px solid var(--line); font-size: 0.9rem; }
+.journal li.alert { border-left-color: var(--alert); }
+.journal li.good { border-left-color: var(--good); }
+.journal li.weather { border-left-color: var(--accent); }
+.journal .when { display: block; font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.journal li:first-child .text { font-weight: 500; }
+
+.panel-foot { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.ticker {
+  position: absolute; left: 12px; bottom: 12px; max-width: min(460px, calc(100% - 24px));
+  padding: 6px 12px; border-radius: 6px; background: var(--paper); color: var(--ink);
+  font-size: 0.9rem; box-shadow: 0 6px 18px -10px var(--shadow);
+  opacity: 0; transform: translateY(4px); transition: opacity .4s, transform .4s; pointer-events: none;
+}
+.ticker.show { opacity: 0.95; transform: none; }
+
+.hint {
+  position: absolute; top: 14px; left: 14px; max-width: min(360px, calc(100% - 28px));
+  padding: 14px 16px; border-radius: 8px; background: var(--paper); color: var(--ink);
+  box-shadow: 0 12px 32px -14px var(--shadow);
+}
+.hint h2 { margin: 0 0 6px; font-family: var(--font-display); font-style: italic; font-size: 1.3rem; }
+.hint p { margin: 0 0 6px; font-size: 0.92rem; }
+.hint ul { margin: 0 0 10px; padding-left: 18px; font-size: 0.9rem; display: grid; gap: 3px; }
+
+.postcard-layer {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(10, 20, 24, 0.55); overflow: auto;
+}
+.postcard {
+  width: min(620px, 100%); background: var(--paper); color: var(--ink); border-radius: 10px;
+  padding: 16px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.6); display: grid; gap: 14px;
+}
+.postcard img { width: 100%; height: auto; display: block; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); }
+.postcard .eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.postcard h2 { margin: 2px 0 0; font-family: var(--font-display); font-style: italic; font-size: 1.8rem; line-height: 1.1; text-wrap: balance; }
+.postcard label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.postcard input {
+  font: italic 500 1.2rem var(--font-display); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; width: 100%;
+}
+.postcard .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.postcard p { margin: 0; font-size: 0.92rem; color: var(--muted); }
+.postcard .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+@media (max-width: 860px) {
+  .stage { grid-template-columns: 1fr; }
+  .panel { overflow: visible; }
+  .journal ol { max-height: 320px; }
+  .speed { margin-left: 0; }
+  .postcard .facts { grid-template-columns: 1fr 1fr; }
+  .hint { top: 8px; left: 8px; padding: 10px 12px; max-width: calc(100% - 16px); }
+  .hint ul { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker { transition: none; }
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Rzeka</h1>
+      <span class="valley-id" id="valleyId">Dolina nr 0</span>
+    </div>
+    <div class="season" aria-live="polite">
+      <div class="season-label" id="seasonLabel"><b>Rok 1</b> · wiosna</div>
+      <div class="season-track" id="seasonTrack"><span><i></i></span><span><i></i></span><span><i></i></span><span><i></i></span></div>
+      <div class="season-names"><span>Wiosna</span><span>Lato</span><span>Jesień</span><span>Zima</span></div>
+    </div>
+    <div class="speed" role="group" aria-label="Upływ czasu">
+      <button class="btn" id="spPause" aria-pressed="false" title="Pauza (spacja)">Pauza</button>
+      <button class="btn" id="sp1" aria-pressed="true">1×</button>
+      <button class="btn" id="sp3" aria-pressed="false">3×</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="mapwrap" id="mapwrap">
+      <div class="mapframe">
+      <canvas id="map" aria-label="Mapa doliny. Przeciągnij, żeby kopać albo sypać ziemię."></canvas>
+      <div class="ticker" id="ticker" role="status"></div>
+      <div class="hint" id="hint">
+        <h2>Źródło już bije</h2>
+        <p>Woda płynie w dół i robi, co chce. Ty masz łopatę.</p>
+        <ul>
+          <li>Przeciągnij po mapie, żeby kopać koryto.</li>
+          <li>Wykopaną ziemię usypiesz w wał: przełącz na <b>Sypy</b> albo użyj prawego przycisku myszy.</li>
+          <li>Rozlewiska dają życie, ale woda z nich paruje. Spróbuj doprowadzić rzekę do morza.</li>
+        </ul>
+        <button class="btn primary" id="hintOk">Biorę łopatę</button>
+      </div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <section>
+        <div class="tools" role="group" aria-label="Narzędzie">
+          <button class="tool" id="toolDig" aria-pressed="true" title="Kop (K)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5l6.5 6.5"/><path d="M17.2 6.8l-7.4 7.4"/><path d="M9.8 14.2l-4.3 4.3a2.1 2.1 0 0 1-3-3l4.3-4.3z"/></svg>
+            <span>Kop<small>pogłębia teren</small></span>
+          </button>
+          <button class="tool" id="toolRaise" aria-pressed="false" title="Sypy (S)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 19h19"/><path d="M5 19c1.8-5.5 4-8 7-8s5.2 2.5 7 8"/><path d="M12 4v4M10 6l2 2 2-2"/></svg>
+            <span>Sypy<small>usypuje wał</small></span>
+          </button>
+        </div>
+        <p class="tool-note" id="toolNote">Ziemia z wykopu trafia na taczki.</p>
+      </section>
+
+      <section class="supplies" aria-label="Zapasy">
+        <div class="supply"><span class="k">Ziemia</span><div class="meter"><i id="earthBar"></i></div><span class="v" id="earthVal">0 taczek</span></div>
+        <div class="supply"><span class="k">Siły</span><div class="meter energy"><i id="energyBar"></i></div><span class="v" id="energyVal">100%</span></div>
+      </section>
+
+      <section>
+        <h2>Dolina</h2>
+        <dl class="facts">
+          <div><dt>Osady</dt><dd id="fVillages">0</dd></div>
+          <div><dt>Mieszkańcy</dt><dd id="fPeople">0</dd></div>
+          <div><dt>Las</dt><dd id="fForest">0 km²</dd></div>
+          <div><dt>Morze</dt><dd id="fSea">jeszcze nie</dd></div>
+        </dl>
+      </section>
+
+      <section class="journal">
+        <h2>Dziennik doliny</h2>
+        <ol id="log"></ol>
+      </section>
+
+      <div class="panel-foot">
+        <button class="btn" id="cardBtn" hidden>Pocztówka</button>
+        <button class="btn quiet" id="newBtn">Nowa dolina</button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="postcard-layer" id="postcard" hidden>
+  <div class="postcard" role="dialog" aria-modal="true" aria-labelledby="pcTitle">
+    <div>
+      <div class="eyebrow" id="pcWhen">Rok 1 · wiosna</div>
+      <h2 id="pcTitle">Rzeka dotarła do morza</h2>
+    </div>
+    <img id="pcImg" alt="Mapa doliny w chwili, gdy rzeka dotarła do morza">
+    <label for="pcName">Nazwa rzeki
+      <input id="pcName" maxlength="28" autocomplete="off">
+    </label>
+    <dl class="facts">
+      <div><dt>Długość</dt><dd id="pcLen">0 km</dd></div>
+      <div><dt>Osady</dt><dd id="pcVil">0</dd></div>
+      <div><dt>Mieszkańcy</dt><dd id="pcPeople">0</dd></div>
+      <div><dt>Las</dt><dd id="pcForest">0 km²</dd></div>
+    </dl>
+    <p>Dolina będzie żyła dalej: rzeka dalej meandruje, osady rosną albo odchodzą. Możesz zostać i patrzeć.</p>
+    <div class="actions">
+      <button class="btn" id="pcNew">Nowa dolina</button>
+      <button class="btn primary" id="pcStay">Zostaję w dolinie</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SIM-START =====
+const W = 192, H = 120, N = W * H;
+const SL = 0;                       // poziom morza
+const SEASON_STEPS = 12000;         // kroków symulacji na porę roku
+const SEASONS = [
+  { name: 'wiosna', q: 1.3, e: 0.9 },
+  { name: 'lato', q: 0.9, e: 1.25 },
+  { name: 'jesień', q: 1.0, e: 0.8 },
+  { name: 'zima', q: 0.55, e: 0.35 },
+];
+const Q0 = 0.003;                   // wydajność źródła na krok
+const E0 = 2.5e-6;                  // parowanie z mokrej kratki na krok
+const CONV = 12, KMAX = 0.24;       // przewodność: płytka woda płynie wolniej niż głęboka
+const KC = 0.5, KS = 0.02, KD = 0.05; // erozja: pojemność nurtu, wymywanie, osadzanie
+const WET = 0.0015;                 // od tej głębokości kratka liczy się jako mokra
+const RAIN = 3e-7, RAIN_STEPS = 1500;
+const ENERGY_MAX = 100, ENERGY_COST = 18, ENERGY_REGEN = ENERGY_MAX / (SEASON_STEPS * 0.6);
+const DIG_RATE = 0.045;             // wysokość na sekundę w środku łopaty
+const EARTH_UNIT = 40;              // taczek na jednostkę ziemi
+
+const VILLAGE_NAMES = ['Olszynka', 'Brzezie', 'Wierzbno', 'Łęgowo', 'Lipniki', 'Kamionka', 'Bród', 'Przewóz',
+  'Zalesie', 'Topolno', 'Grabowiec', 'Trzcinica', 'Mokre', 'Sosnówka', 'Rybaki', 'Młynary', 'Jaworze',
+  'Dąbrówka', 'Kępa', 'Nadbrzeże', 'Łąki', 'Wikliniec', 'Bobrowniki', 'Czaplin', 'Żurawiec', 'Rakowo',
+  'Przystań', 'Studzianka', 'Zawada', 'Okole'];
+const RIVER_NAMES = ['Bystrzyca', 'Wierzbica', 'Srebrna', 'Cicha', 'Leniwka', 'Modra', 'Jasieńka', 'Olszanka',
+  'Krzywa', 'Łaskawa', 'Brzozówka', 'Mętna', 'Zimna', 'Kręta'];
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function makeNoise(rand) {
+  const S = 256, v = new Float32Array(S * S);
+  for (let i = 0; i < v.length; i++) v[i] = rand();
+  const lat = (x, y) => v[(y & 255) * S + (x & 255)];
+  const n = (x, y) => {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = lat(ix, iy), b = lat(ix + 1, iy), c = lat(ix, iy + 1), d = lat(ix + 1, iy + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+  const fbm = (x, y, oct) => {
+    let s = 0, amp = 0.5, f = 1, norm = 0;
+    for (let o = 0; o < oct; o++) { s += amp * n(x * f, y * f); norm += amp; amp *= 0.5; f *= 2.03; }
+    return s / norm;
+  };
+  return { n, fbm };
+}
+
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+function shuffle(arr, rand) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+
+class Valley {
+  constructor(seed) {
+    this.seed = seed >>> 0;
+    this.rand = mulberry32(this.seed ^ 0x5bd1e995);
+    for (const k of ['h', 'hMin', 'w', 's', 'g', 'm', 'flow', 'erod', 'dw', 'ds', 'hash', 'work']) this[k] = new Float32Array(N);
+    this.sea = new Uint8Array(N);
+    this.coast = new Uint8Array(N);
+    this.step = 0;
+    this.earth = 0;
+    this.energy = ENERGY_MAX;
+    this.helpFactor = 1;
+    this.springs = [];
+    this.villages = [];
+    this.log = [];
+    this.rainAt = -1; this.rainLeft = 0; this.drought = false; this.extraSprings = 0;
+    this.reached = null; this.reachStreak = 0; this.riverPath = null; this.riverName = '';
+    this.justReached = false;
+    this.flockAt = -1; this.firstWinter = true;
+    this.names = shuffle(VILLAGE_NAMES.slice(), this.rand);
+    this.generate();
+    this.say('W górach bije źródło. Dolina czeka na wodę.', 'weather');
+  }
+
+  get year() { return Math.floor(this.step / (SEASON_STEPS * 4)) + 1; }
+  get seasonIdx() { return Math.floor(this.step / SEASON_STEPS) % 4; }
+  get seasonProgress() { return (this.step % SEASON_STEPS) / SEASON_STEPS; }
+  when() { return `Rok ${this.year} · ${SEASONS[this.seasonIdx].name}`; }
+  say(text, kind = '') { this.log.push({ when: this.when(), text, kind }); }
+
+  generate() {
+    const r = mulberry32(this.seed), nz = makeNoise(r);
+    const ox = r() * 40, oy = r() * 40;
+    // moreny w poprzek doliny, każda z jedną przełęczą; za nimi zbierają się jeziora
+    const ridges = [0.38, 0.52, 0.65].map((tt, k) => ({
+      t: tt + (r() - 0.5) * 0.04, hgt: 0.07 + r() * 0.04, gap: 0.12 + r() * 0.76, k,
+    }));
+    const sp = { x: Math.round(W * (0.07 + r() * 0.1)), y: Math.round(H * (0.12 + r() * 0.2)) };
+    let sx = 0, sy = 0, sc = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, nx = x / (W - 1), ny = y / (H - 1);
+      const t = nx * 0.55 + ny * 0.45;                       // oś: góry w lewym górnym rogu, morze w prawym dolnym
+      const tc = 0.8 + (nz.fbm(nx * 2.5 + ox, ny * 2.5 + oy, 3) - 0.5) * 0.16;
+      const mt = 1 - smooth(0.02, 0.42, t);
+      const ridged = 1 - Math.abs(2 * nz.fbm(nx * 5 + oy, ny * 5 + ox, 5) - 1);
+      const hills = nz.fbm(nx * 7 + ox + 11, ny * 7 + oy + 5, 4) - 0.5;
+      let hh = 0.03 + 0.33 * (1 - smooth(0.2, tc, t)) + hills * 0.05 + mt * mt * (0.2 + 0.5 * ridged);
+      const tr = tc - 0.05;                                  // wydmy wzdłuż wybrzeża
+      hh += 0.045 * Math.exp(-(((t - tr) / 0.013) ** 2)) * (0.8 + 0.5 * nz.n(nx * 18 + ox, ny * 18 + oy));
+      const u = ny * 0.55 - nx * 0.45 + 0.45;                // położenie w poprzek doliny, 0..1
+      for (const rg of ridges) {
+        const gap = 1 - 0.85 * Math.exp(-(((u - rg.gap) / 0.05) ** 2));
+        const tw = rg.t + (nz.fbm(u * 2.5 + rg.k * 5, rg.k * 9 + 2, 3) - 0.5) * 0.16;
+        const wd = 0.016 + 0.012 * nz.n(u * 4 + rg.k * 3, 7 + rg.k);
+        hh += rg.hgt * Math.exp(-(((t - tw) / wd) ** 2)) * gap * (0.7 + 0.6 * nz.n(u * 12 + rg.k * 31, rg.k * 17));
+      }
+      hh -= 0.012 * Math.exp(-((x - sp.x) ** 2 + (y - sp.y) ** 2) / 3);
+      const edge = Math.min(x, y, W - 1 - x, H - 1 - y);         // zbocza doliny przy krawędziach mapy
+      hh += 0.1 * Math.exp(-edge / 5);
+      if (t > tc) {
+        hh = SL - 0.006 - (t - tc) * 0.8 + hills * 0.02;
+        this.sea[i] = 1; sx += x; sy += y; sc++;
+      } else if (t > tc - 0.025) {
+        hh = Math.min(hh, SL + 0.003 + (tc - t) * 1.6);
+      }
+      this.h[i] = hh;
+      this.erod[i] = Math.min(1, Math.max(0.12, 0.15 + 0.85 * (1 - mt) * (0.65 + 0.7 * nz.n(nx * 9 + 3, ny * 9 + 7))));
+      this.hash[i] = r();
+    }
+    this.seaLabel = { x: sc ? sx / sc : W * 0.9, y: sc ? sy / sc : H * 0.9 };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      this.hMin[i] = this.h[i] - 0.12;
+      if (this.sea[i] && this.h[i] < SL) this.w[i] = SL - this.h[i];
+      if (!this.sea[i]) {
+        for (let dy = -3; dy <= 3 && !this.coast[i]; dy++) for (let dx = -3; dx <= 3; dx++) {
+          const xx = x + dx, yy = y + dy;
+          if (xx >= 0 && yy >= 0 && xx < W && yy < H && this.sea[yy * W + xx]) { this.coast[i] = 1; break; }
+        }
+      }
+      this.g[i] = this.sea[i] ? 0 : 0.06 * this.hash[i] * (1 - smooth(0.3, 0.6, this.h[i]));
+    }
+    this.springs.push({ i: sp.y * W + sp.x, x: sp.x, y: sp.y, k: 1, main: true });
+  }
+
+  addSpring() {
+    for (let tries = 0; tries < 80; tries++) {
+      const x = 4 + Math.floor(this.rand() * W * 0.4), y = 3 + Math.floor(this.rand() * H * 0.6);
+      const i = y * W + x, t = (x / (W - 1)) * 0.55 + (y / (H - 1)) * 0.45;
+      if (t > 0.32 || this.h[i] < 0.35 || this.w[i] > WET) continue;
+      if (this.springs.some(s => (s.x - x) ** 2 + (s.y - y) ** 2 < 18 * 18)) continue;
+      this.springs.push({ i, x, y, k: 0.5, main: false });
+      this.extraSprings++;
+      this.say('W górach odezwało się nowe źródło.', 'good');
+      return;
+    }
+  }
+
+  stepOnce() {
+    if (this.step > 0 && this.step % SEASON_STEPS === 0) this.newSeason();
+    const si = this.seasonIdx, p = this.seasonProgress;
+    let qMul = SEASONS[si].q;
+    if (si === 0) qMul += 1.0 * Math.max(0, 1 - p * 2.5);   // roztopy na początku wiosny
+    const eMul = SEASONS[si].e * (this.drought ? 1.7 : 1);
+    let rain = 0;
+    if (this.step === this.rainAt) { this.rainLeft = RAIN_STEPS; this.say('Nad doliną przeszła ulewa. Strumienie wzbierają.', 'weather'); }
+    if (this.rainLeft > 0) { rain = RAIN; this.rainLeft--; }
+    this.waterStep(qMul, eMul, rain);
+    if ((this.step & 1) === 0) this.erodeStep();
+    if (this.step % 16 === 0) this.slumpStep();
+    if (this.step % 120 === 0) this.vegStep();
+    if (this.step % 600 === 300) this.villageStep();
+    if (this.step % 300 === 150 && this.rainLeft === 0) this.reachStep();
+    this.energy = Math.min(ENERGY_MAX, this.energy + ENERGY_REGEN * this.helpFactor);
+    this.step++;
+  }
+
+  tick(n) { for (let k = 0; k < n; k++) this.stepOnce(); }
+
+  waterStep(qMul, eMul, rain) {
+    const { h, w, s, dw, ds, flow, sea } = this;
+    const q = Q0 * qMul;
+    for (const sp of this.springs) w[sp.i] += q * sp.k;
+    if (rain > 0) for (let i = 0; i < N; i++) if (!sea[i]) w[i] += rain;
+    dw.fill(0); ds.fill(0);
+    for (let y = 0; y < H; y++) {
+      const row = y * W;
+      for (let x = 0; x < W; x++) {
+        const i = row + x, wi = w[i];
+        if (wi < 1e-7) { flow[i] *= 0.97; continue; }
+        const Hi = h[i] + wi;
+        let d0 = 0, d1 = 0, d2 = 0, d3 = 0, d;
+        if (x > 0 && (d = Hi - h[i - 1] - w[i - 1]) > 0) d0 = d;
+        if (x < W - 1 && (d = Hi - h[i + 1] - w[i + 1]) > 0) d1 = d;
+        if (y > 0 && (d = Hi - h[i - W] - w[i - W]) > 0) d2 = d;
+        if (y < H - 1 && (d = Hi - h[i + W] - w[i + W]) > 0) d3 = d;
+        const sum = d0 + d1 + d2 + d3;
+        if (sum <= 0) { flow[i] *= 0.97; continue; }
+        let k = CONV * wi; if (k > KMAX) k = KMAX;
+        let o = sum * k; if (o > wi) o = wi;
+        const f = o / sum, sf = (s[i] / wi) * f;
+        if (d0 > 0) { dw[i - 1] += d0 * f; ds[i - 1] += d0 * sf; }
+        if (d1 > 0) { dw[i + 1] += d1 * f; ds[i + 1] += d1 * sf; }
+        if (d2 > 0) { dw[i - W] += d2 * f; ds[i - W] += d2 * sf; }
+        if (d3 > 0) { dw[i + W] += d3 * f; ds[i + W] += d3 * sf; }
+        dw[i] -= o; ds[i] -= sf * sum;
+        flow[i] = flow[i] * 0.97 + o * 0.03;
+      }
+    }
+    const ev = E0 * eMul;
+    for (let i = 0; i < N; i++) {
+      let wi = w[i] + dw[i], si = s[i] + ds[i];
+      if (sea[i] && h[i] < SL - 0.004) wi = SL - h[i];       // otwarte morze trzyma swój poziom
+      else if (wi > 0) { wi -= ev; if (wi < 0) wi = 0; }
+      if (wi <= 0 && si > 0) { h[i] += si; si = 0; }
+      w[i] = wi; s[i] = si < 0 ? 0 : si;
+    }
+  }
+
+  erodeStep() {
+    const { h, w, s, flow, erod, hMin } = this;
+    for (let i = 0; i < N; i++) {
+      if (w[i] < 1e-5) continue;
+      const cap = KC * flow[i], si = s[i];
+      if (si < cap) {
+        let e = KS * (cap - si) * erod[i];
+        if (h[i] - e < hMin[i]) e = Math.max(0, h[i] - hMin[i]);
+        h[i] -= e; s[i] = si + e;
+      } else {
+        const d = KD * (si - cap);
+        h[i] += d; s[i] = si - d;
+      }
+    }
+  }
+
+  // Brzegi przy wodzie osuwają się do koryta, wały powoli rozmywają
+  slumpStep() {
+    const { h, w, erod } = this;
+    const R = 0.12;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      for (let n = 0; n < 2; n++) {
+        const j = n === 0 ? (x < W - 1 ? i + 1 : -1) : (y < H - 1 ? i + W : -1);
+        if (j < 0 || (w[i] < 0.002 && w[j] < 0.002)) continue;
+        const T = 0.018 + (1 - Math.min(erod[i], erod[j])) * 0.05;
+        const d = h[i] - h[j];
+        if (d > T) { const m = (d - T) * R; h[i] -= m; h[j] += m; }
+        else if (d < -T) { const m = (-d - T) * R; h[i] += m; h[j] -= m; }
+      }
+    }
+  }
+
+  vegStep() {
+    const { h, w, m, g, sea } = this;
+    const D = 0.84, DD = 0.79;
+    for (let i = 0; i < N; i++) m[i] = (!sea[i] && w[i] > WET) ? 1 : 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; let v = m[i];
+      if (x > 0) v = Math.max(v, m[i - 1] * D);
+      if (y > 0) {
+        v = Math.max(v, m[i - W] * D);
+        if (x > 0) v = Math.max(v, m[i - W - 1] * DD);
+        if (x < W - 1) v = Math.max(v, m[i - W + 1] * DD);
+      }
+      m[i] = v;
+    }
+    for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) {
+      const i = y * W + x; let v = m[i];
+      if (x < W - 1) v = Math.max(v, m[i + 1] * D);
+      if (y < H - 1) {
+        v = Math.max(v, m[i + W] * D);
+        if (x < W - 1) v = Math.max(v, m[i + W + 1] * DD);
+        if (x > 0) v = Math.max(v, m[i + W - 1] * DD);
+      }
+      m[i] = v;
+    }
+    const si = this.seasonIdx;
+    const grow = si === 3 ? 0 : si === 1 ? 0.8 : 1;
+    for (let i = 0; i < N; i++) {
+      this.work[i] *= 0.997;                                  // ślady łopaty powoli zarastają
+      if (sea[i] && h[i] < SL) { g[i] = 0; continue; }
+      if (w[i] > 0.006) { g[i] *= 0.97; continue; }
+      const fert = 1 - smooth(0.42, 0.7, h[i]);
+      const target = fert * clamp01((m[i] - 0.1) / 0.55);
+      const gi = g[i];
+      if (gi < target) g[i] = gi + (target - gi) * (gi < 0.5 ? 0.045 : 0.01) * grow;
+      else g[i] = gi - (gi - target) * 0.006;
+    }
+  }
+
+  avgG(i, r) {
+    const x0 = i % W, y0 = (i / W) | 0; let s = 0, c = 0;
+    for (let y = Math.max(0, y0 - r); y <= Math.min(H - 1, y0 + r); y++)
+      for (let x = Math.max(0, x0 - r); x <= Math.min(W - 1, x0 + r); x++) { s += this.g[y * W + x]; c++; }
+    return s / c;
+  }
+
+  nearVillage(x, y, r) {
+    for (const v of this.villages) if (v.state === 'alive' && (v.x - x) ** 2 + (v.y - y) ** 2 < r * r) return true;
+    return false;
+  }
+
+  canSettle(x, y) {
+    if (x < 3 || y < 3 || x > W - 4 || y > H - 4) return false;
+    const { h, w, m, sea } = this, i = y * W + x;
+    if (sea[i] || w[i] > 0.0005 || h[i] < SL + 0.008 || h[i] > 0.5) return false;
+    if (m[i] < 0.45 || m[i] > 0.9) return false;
+    if (Math.abs(h[i + 1] - h[i - 1]) + Math.abs(h[i + W] - h[i - W]) > 0.025) return false;
+    if (this.avgG(i, 2) < 0.38) return false;
+    if (this.villages.some(v => (v.x - x) ** 2 + (v.y - y) ** 2 < 14 * 14)) return false;
+    if (this.springs.some(s => (s.x - x) ** 2 + (s.y - y) ** 2 < 8 * 8)) return false;
+    return true;
+  }
+
+  villageStep() {
+    const { w, m } = this;
+    let pop = 0;
+    for (const v of this.villages) {
+      if (v.state !== 'alive') continue;
+      const i = v.y * W + v.x;
+      let wet = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (w[i + dy * W + dx] > 0.003) wet++;
+      if (wet >= 4) {
+        v.flood++;
+        if (v.flood === 1) this.say(`Woda wdziera się do osady ${v.name}!`, 'alert');
+        if (v.flood >= 5) { v.state = 'drowned'; this.say(`Mieszkańcy opuścili zalaną osadę ${v.name}.`, 'alert'); continue; }
+      } else {
+        if (v.flood > 0) { v.flood = 0; v.pop = Math.max(1, v.pop - 1); this.say(`Osada ${v.name} przetrwała powódź.`); }
+        if (m[i] < 0.3) {
+          v.dry++;
+          if (v.dry === 6) this.say(`Woda odeszła od osady ${v.name}. Ludzie martwią się o studnie.`, 'alert');
+          if (v.dry >= 20) { v.state = 'left'; this.say(`Osada ${v.name} opustoszała. Do wody było za daleko.`, 'alert'); continue; }
+        } else {
+          v.dry = 0;
+          if (v.pop < 6 && this.avgG(i, 3) > 0.42 && this.rand() < 0.1) {
+            v.pop++;
+            if (v.pop === 3) this.say(`Osada ${v.name} rośnie. Mieszkańcy pomagają przy kopaniu.`, 'good');
+          }
+        }
+      }
+      pop += v.pop;
+    }
+    this.helpFactor = 1 + Math.min(1.5, pop * 0.05);
+    const thaw = this.seasonIdx === 0 && this.seasonProgress < 0.4;
+    if (this.seasonIdx !== 3 && !thaw && this.villages.length < 12 && this.rand() < 0.25) {
+      for (let tries = 0; tries < 50; tries++) {
+        const x = Math.floor(this.rand() * W), y = Math.floor(this.rand() * H);
+        if (!this.canSettle(x, y)) continue;
+        const name = this.names.pop() || `Osada ${this.villages.length + 1}`;
+        this.villages.push({ x, y, name, pop: 1, flood: 0, dry: 0, state: 'alive', born: this.when(), seed: this.rand() });
+        this.say(`Nad wodą powstała osada ${name}.`, 'good');
+        break;
+      }
+    }
+  }
+
+  findRiver() {
+    const { w, sea, h } = this;
+    const prev = this._prev || (this._prev = new Int32Array(N));
+    const q = this._q || (this._q = new Int32Array(N));
+    prev.fill(-2);
+    let qh = 0, qt = 0;
+    for (const sp of this.springs) if (w[sp.i] > WET && prev[sp.i] === -2) { prev[sp.i] = -1; q[qt++] = sp.i; }
+    while (qh < qt) {
+      const i = q[qh++], x = i % W;
+      for (let n = 0; n < 4; n++) {
+        const j = n === 0 ? (x > 0 ? i - 1 : -1) : n === 1 ? (x < W - 1 ? i + 1 : -1) : n === 2 ? i - W : i + W;
+        if (j < 0 || j >= N || prev[j] !== -2) continue;
+        if (sea[j] && h[j] < SL - 0.002) {
+          const path = [];
+          for (let c = i; c >= 0; c = prev[c]) path.push(c);
+          return path.reverse();
+        }
+        if (w[j] > WET) { prev[j] = i; q[qt++] = j; }
+      }
+    }
+    return null;
+  }
+
+  reachStep() {
+    const path = this.findRiver();
+    if (!path) { this.reachStreak = 0; return; }
+    this.riverPath = path;
+    if (this.reached) return;
+    if (++this.reachStreak < 2) return;
+    this.reached = { when: this.when(), length: path.length };
+    this.riverName = RIVER_NAMES[Math.floor(this.rand() * RIVER_NAMES.length)];
+    this.say('Rzeka dotarła do morza.', 'good');
+    this.justReached = true;
+  }
+
+  wetCount() {
+    let c = 0;
+    for (let i = 0; i < N; i++) if (!this.sea[i] && this.w[i] > WET) c++;
+    return c;
+  }
+
+  newSeason() {
+    const si = this.seasonIdx, yr = this.year;
+    this.drought = false;
+    if (si === 0) {
+      this.say('Roztopy. Ze źródła płynie więcej wody.', 'weather');
+      if (yr >= 2 && this.extraSprings < 2 && this.rand() < 0.7) this.addSpring();
+    } else if (si === 1) {
+      if (yr >= 2 && this.rand() < 0.35) { this.drought = true; this.say('Upalne lato. Woda paruje szybciej niż zwykle.', 'weather'); }
+    } else if (si === 2) {
+      if (this.wetCount() > 400) { this.flockAt = this.step; this.say('Żurawie zatrzymały się na rozlewiskach.', 'good'); }
+    } else if (this.firstWinter) {
+      this.firstWinter = false;
+      this.say('Pierwsza zima. Góry bieleją, woda płynie leniwie.', 'weather');
+    }
+    if (si !== 3 && this.rand() < 0.4) this.rainAt = this.step + 600 + Math.floor(this.rand() * SEASON_STEPS * 0.7);
+  }
+
+  // Łopata: kopanie zabiera ziemię na taczki, sypanie ją oddaje
+  applyTool(cx, cy, dt, mode, radius) {
+    const { h, erod } = this;
+    const r2 = radius * radius, sig2 = 2 * (radius * 0.6) ** 2, rate = DIG_RATE * dt;
+    const x0 = Math.max(0, Math.floor(cx - radius)), x1 = Math.min(W - 1, Math.ceil(cx + radius));
+    const y0 = Math.max(0, Math.floor(cy - radius)), y1 = Math.min(H - 1, Math.ceil(cy + radius));
+    let status = 'ok';
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+      if (this.nearVillage(x, y, 1.8)) { status = 'village'; continue; }
+      const i = y * W + x, f = Math.exp(-d2 / sig2);
+      if (mode === 'dig') {
+        let a = rate * f * (0.3 + 0.7 * erod[i]);
+        if (h[i] - a < SL - 0.06) a = Math.max(0, h[i] - (SL - 0.06));
+        const cost = a * ENERGY_COST;
+        if (this.energy < cost) return 'tired';
+        h[i] -= a; this.work[i] -= a; this.earth += a; this.energy -= cost;
+      } else {
+        let a = Math.min(rate * f, this.earth);
+        if (h[i] + a > 1.2) a = Math.max(0, 1.2 - h[i]);
+        const cost = a * ENERGY_COST * 0.7;
+        if (this.energy < cost) return 'tired';
+        h[i] += a; this.work[i] += a; this.earth -= a; this.energy -= cost;
+        if (this.earth <= 1e-6) { this.earth = 0; return 'noearth'; }
+      }
+    }
+    return status;
+  }
+
+  stats() {
+    let forest = 0;
+    for (let i = 0; i < N; i++) if (!this.sea[i] && this.g[i] > 0.72 && this.w[i] < WET) forest++;
+    const alive = this.villages.filter(v => v.state === 'alive');
+    return { villages: alive.length, people: alive.reduce((a, v) => a + v.pop, 0) * 37, forest };
+  }
+
+  toState() {
+    const enc = a => {
+      const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let s = '';
+      for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+      return btoa(s);
+    };
+    const arrays = {};
+    for (const k of ['h', 'hMin', 'w', 's', 'g', 'flow', 'work']) arrays[k] = enc(this[k]);
+    const plain = {};
+    for (const k of ['step', 'earth', 'energy', 'helpFactor', 'springs', 'villages', 'log', 'rainAt', 'rainLeft', 'drought',
+      'extraSprings', 'reached', 'reachStreak', 'riverPath', 'riverName', 'flockAt', 'firstWinter', 'names']) plain[k] = this[k];
+    return { seed: this.seed, arrays, plain };
+  }
+
+  static fromState(st) {
+    const v = new Valley(st.seed);
+    for (const [k, b] of Object.entries(st.arrays)) {
+      const bin = atob(b), u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      v[k].set(new Float32Array(u.buffer));
+    }
+    Object.assign(v, st.plain);
+    v.rand = mulberry32((v.seed ^ 0x5bd1e995) + v.step);
+    return v;
+  }
+}
+// ===== SIM-END =====
+
+// ---------- Wygląd mapy (stała paleta: to rysunek, nie interfejs) ----------
+const COL = {
+  soil: [214, 198, 160], soilHigh: [184, 172, 152], rock: [146, 142, 150], snow: [242, 244, 248],
+  grass: [146, 180, 102], grassAutumn: [192, 168, 92], grassWinter: [176, 172, 144],
+  forest: [74, 114, 70], forestDark: [52, 88, 56], sand: [228, 214, 174],
+  dug: [132, 98, 66], bank: [176, 142, 98],
+  water: [108, 168, 196], waterDeep: [40, 96, 140], mud: [150, 138, 104],
+  sea: [58, 112, 148], seaDeep: [32, 72, 110], ice: [214, 230, 238],
+};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = id => document.getElementById(id);
+const canvas = $('map'), ctx = canvas.getContext('2d');
+const terr = document.createElement('canvas'); terr.width = W; terr.height = H;
+const tctx = terr.getContext('2d');
+const img = tctx.createImageData(W, H);
+const mapwrap = $('mapwrap');
+
+let valley, tool = 'dig', speed = 1, paused = false;
+let dpr = 1, cssW = 0, cssH = 0;
+let stepAcc = 0, lastT = 0, frameNo = 0, shownLog = 0;
+const pointer = { down: false, inside: false, x: 0, y: 0, lx: 0, ly: 0, alt: false, coarse: false };
+let tickerTimer = 0, lastNotice = 0;
+
+function cyclicBump(phase, center, width, edge) {
+  let d = Math.abs(phase - center); d = Math.min(d, 4 - d);
+  return clamp01((width - d) / edge);
+}
+const mix = (a, b, t, o) => { o[0] = a[0] + (b[0] - a[0]) * t; o[1] = a[1] + (b[1] - a[1]) * t; o[2] = a[2] + (b[2] - a[2]) * t; return o; };
+
+function renderTerrain(time) {
+  const v = valley, { h, w, g, s, flow, sea, coast, hash, erod, work } = v, d = img.data;
+  const phase = (v.step / SEASON_STEPS) % 4;
+  const winter = cyclicBump(phase, 3.5, 0.75, 0.4);
+  const autumn = cyclicBump(phase, 2.5, 0.6, 0.35);
+  const snowLine = 0.93 - 0.38 * winter;
+  const grassCol = [0, 0, 0], c = [0, 0, 0], wc = [0, 0, 0];
+  mix(COL.grass, COL.grassAutumn, autumn, grassCol);
+  mix(grassCol, COL.grassWinter, winter * 0.8, grassCol);
+  const tt = reduceMotion ? 0 : time * 0.0009;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, p = i * 4, hi = h[i], wi = w[i];
+    const isSea = sea[i] && hi < SL;
+    // ląd
+    mix(COL.soil, COL.soilHigh, clamp01((hi - 0.05) / 0.5), c);
+    const rk = smooth(0.4, 0.66, hi) * (1 - erod[i] * 0.4);
+    if (rk > 0) mix(c, COL.rock, rk, c);
+    if (coast[i] && hi < SL + 0.014) mix(c, COL.sand, 0.8, c);
+    const gv = g[i];
+    if (gv > 0) mix(c, grassCol, Math.min(1, gv * 1.8), c);
+    if (gv > 0.55) {
+      const fa = smooth(0.55, 0.85, gv);
+      mix(c, COL.forest, fa, c);
+      if (hash[i] < fa * 0.55) mix(c, COL.forestDark, 0.75, c);
+    }
+    const wk = work[i];
+    if (wk < -0.002) mix(c, COL.dug, clamp01(-wk * 30) * (1 - gv * 0.6), c);
+    else if (wk > 0.002) mix(c, COL.bank, clamp01(wk * 30) * (1 - gv * 0.6), c);
+    if (hi > snowLine) mix(c, COL.snow, smooth(snowLine, snowLine + 0.05, hi), c);
+    if (wi > 0.0002 && !isSea) { c[0] *= 0.9; c[1] *= 0.9; c[2] *= 0.92; }
+    const ci = Math.floor(hi * 20);
+    if (!isSea && ((x < W - 1 && Math.floor(h[i + 1] * 20) !== ci) || (y < H - 1 && Math.floor(h[i + W] * 20) !== ci))) {
+      c[0] *= 0.87; c[1] *= 0.87; c[2] *= 0.87;
+    }
+    const hl = (x > 0 && y > 0) ? h[i - W - 1] : hi, hr = (x < W - 1 && y < H - 1) ? h[i + W + 1] : hi;
+    let shade = 1 + (hl - hr) * 14;
+    shade = shade < 0.72 ? 0.72 : shade > 1.22 ? 1.22 : shade;
+    // woda
+    let a = 0;
+    if (isSea) {
+      a = 1;
+      mix(COL.sea, COL.seaDeep, clamp01((SL - hi) / 0.12), wc);
+      if (SL - hi < 0.006) mix(wc, COL.water, 0.5, wc);
+    } else if (wi > 0.0008) {
+      a = clamp01((wi - 0.0008) / 0.003);
+      mix(COL.water, COL.waterDeep, clamp01(wi / 0.05), wc);
+      const turb = clamp01((s[i] / wi) * 6);
+      if (turb > 0) mix(wc, COL.mud, turb * 0.6, wc);
+      if (winter > 0.3 && wi < 0.03) mix(wc, COL.ice, (winter - 0.3) * 0.7, wc);
+      const fl = flow[i];
+      if (fl > 0.00025 && tt) {
+        const ph = (hash[i] * 5 + tt * (1 + fl * 400)) % 1;
+        if (ph < 0.07) mix(wc, COL.snow, 0.35, wc);
+      }
+    }
+    if (a > 0) { mix(c, wc, a, c); shade = 1 + (shade - 1) * (1 - a * 0.75); }
+    d[p] = c[0] * shade; d[p + 1] = c[1] * shade; d[p + 2] = c[2] * shade; d[p + 3] = 255;
+  }
+  tctx.putImageData(img, 0, 0);
+}
+
+function labelText(text, x, y, size, style, fill, align = 'left') {
+  ctx.font = `${style} ${size * dpr}px Alegreya, Georgia, serif`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3.2 * dpr; ctx.strokeStyle = 'rgba(246, 243, 232, 0.88)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill; ctx.fillText(text, x, y);
+}
+
+function drawHouse(x, y, s, wall, roof) {
+  ctx.fillStyle = wall;
+  ctx.fillRect(x - s * 0.5, y - s * 0.2, s, s * 0.7);
+  ctx.fillStyle = roof;
+  ctx.beginPath(); ctx.moveTo(x - s * 0.65, y - s * 0.15); ctx.lineTo(x, y - s * 0.75); ctx.lineTo(x + s * 0.65, y - s * 0.15); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(40, 30, 25, 0.55)'; ctx.lineWidth = 0.8 * dpr;
+  ctx.strokeRect(x - s * 0.5, y - s * 0.2, s, s * 0.7);
+}
+
+function drawOverlay(time) {
+  const v = valley, cs = canvas.width / W;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(terr, 0, 0, canvas.width, canvas.height);
+
+  // morze
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${4 * dpr}px`;
+  ctx.font = `italic 600 ${17 * dpr}px Alegreya, Georgia, serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(232, 242, 248, 0.6)';
+  ctx.fillText('Morze', (v.seaLabel.x + 0.5) * cs, (v.seaLabel.y + 0.5) * cs);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+  // nazwa rzeki
+  if (v.reached && v.riverName && v.riverPath && v.riverPath.length > 10) {
+    const k = v.riverPath[Math.floor(v.riverPath.length * 0.55)];
+    labelText(v.riverName, (k % W + 0.5) * cs + 10 * dpr, (Math.floor(k / W) + 0.5) * cs - 12 * dpr, 16, 'italic 700', '#1C4D6A', 'left');
+  }
+
+  // źródła
+  for (const sp of v.springs) {
+    const x = (sp.x + 0.5) * cs, y = (sp.y + 0.5) * cs;
+    ctx.beginPath(); ctx.arc(x, y, 3.2 * dpr, 0, Math.PI * 2);
+    ctx.fillStyle = '#2E78A6'; ctx.fill();
+    ctx.lineWidth = 1.5 * dpr; ctx.strokeStyle = 'rgba(246, 243, 232, 0.95)'; ctx.stroke();
+    if (sp.main) labelText('źródło', x + 7 * dpr, y - 1 * dpr, 12, 'italic 500', '#24485C');
+  }
+
+  // osady
+  const hs = Math.max(6, cs / dpr * 1.4) * dpr;
+  for (const vil of v.villages) {
+    const x = (vil.x + 0.5) * cs, y = (vil.y + 0.5) * cs;
+    const alive = vil.state === 'alive';
+    const n = alive ? Math.min(6, vil.pop) : 2;
+    const r = mulberry32(Math.floor(vil.seed * 1e9));
+    for (let k = 0; k < n; k++) {
+      const ang = r() * Math.PI * 2, dist = k === 0 ? 0 : hs * (0.7 + r() * 0.5);
+      drawHouse(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist * 0.7, hs,
+        alive ? '#F1E9DA' : 'rgba(200, 196, 188, 0.85)', alive ? '#A9483A' : 'rgba(120, 116, 112, 0.85)');
+    }
+    const right = vil.x < W - 26;
+    const lx = x + (right ? 1 : -1) * (hs * 1.6), ly = y - hs * 0.3;
+    if (alive) labelText(vil.name, lx, ly, 13, 'italic 500', '#2A2722', right ? 'left' : 'right');
+    else labelText(vil.name, lx, ly, 12, 'italic 500', 'rgba(70, 66, 60, 0.7)', right ? 'left' : 'right');
+    if (alive && vil.flood > 0) {
+      ctx.beginPath(); ctx.arc(x, y, hs * 2.2 + Math.sin(time * 0.006) * dpr * 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(176, 69, 45, 0.85)'; ctx.lineWidth = 1.6 * dpr; ctx.stroke();
+    }
+  }
+
+  // żurawie
+  if (v.flockAt >= 0 && !reduceMotion) {
+    const pr = (v.step - v.flockAt) / (SEASON_STEPS * 0.45);
+    if (pr >= 0 && pr <= 1) {
+      const fx = (1.04 - pr * 1.12) * canvas.width, fy = (0.12 + pr * 0.38) * canvas.height;
+      ctx.strokeStyle = 'rgba(38, 40, 44, 0.75)'; ctx.lineWidth = 1.3 * dpr;
+      const flap = Math.sin(time * 0.012) * 1.6 * dpr;
+      for (let k = 0; k < 9; k++) {
+        const row = Math.ceil(k / 2), side = k % 2 ? 1 : -1;
+        const bx = fx + row * 9 * dpr, by = fy + side * row * 6 * dpr;
+        ctx.beginPath(); ctx.moveTo(bx - 4 * dpr, by - 2 * dpr + flap); ctx.lineTo(bx, by); ctx.lineTo(bx + 4 * dpr, by - 2 * dpr + flap); ctx.stroke();
+      }
+    }
+  }
+
+  // łopata
+  if (pointer.inside || pointer.down) {
+    const mode = currentMode();
+    const rad = brushRadius() * cs;
+    ctx.beginPath(); ctx.arc(pointer.x * cs, pointer.y * cs, rad, 0, Math.PI * 2);
+    ctx.setLineDash([4 * dpr, 3 * dpr]);
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.strokeStyle = mode === 'dig' ? 'rgba(60, 36, 14, 0.9)' : 'rgba(250, 236, 200, 0.95)';
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+// ---------- Sterowanie ----------
+const brushRadius = () => pointer.coarse ? 3.4 : 2.6;
+const currentMode = () => pointer.alt ? (tool === 'dig' ? 'raise' : 'dig') : tool;
+
+function cellFromEvent(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  const c = cellFromEvent(e);
+  pointer.down = true; pointer.alt = e.button === 2; pointer.coarse = e.pointerType === 'touch';
+  pointer.x = pointer.lx = c.x; pointer.y = pointer.ly = c.y;
+  closeHint();
+  e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  const c = cellFromEvent(e);
+  pointer.x = c.x; pointer.y = c.y; pointer.inside = true;
+  if (e.pointerType !== 'touch') pointer.coarse = false;
+});
+const endPointer = () => { pointer.down = false; pointer.alt = false; };
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('pointerleave', () => { pointer.inside = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+function useTool(dt) {
+  const mode = currentMode();
+  const dx = pointer.x - pointer.lx, dy = pointer.y - pointer.ly;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy)));
+  let status = 'ok';
+  for (let k = 1; k <= steps; k++) {
+    const st = valley.applyTool(pointer.lx + dx * k / steps, pointer.ly + dy * k / steps, dt / steps, mode, brushRadius());
+    if (st !== 'ok') status = st;
+    if (st === 'tired' || st === 'noearth') break;
+  }
+  pointer.lx = pointer.x; pointer.ly = pointer.y;
+  const now = performance.now();
+  if (status !== 'ok' && now - lastNotice > 2500) {
+    lastNotice = now;
+    if (status === 'tired') notice('Brak sił. Odpocznij chwilę albo przyspiesz czas.');
+    if (status === 'noearth') notice('Taczki puste. Najpierw coś wykop.');
+    if (status === 'village') notice('Tu mieszkają ludzie. Łopata omija osady.');
+  }
+}
+
+function setTool(t) {
+  tool = t;
+  $('toolDig').setAttribute('aria-pressed', t === 'dig');
+  $('toolRaise').setAttribute('aria-pressed', t === 'raise');
+  $('toolNote').textContent = t === 'dig' ? 'Ziemia z wykopu trafia na taczki.' : 'Sypiesz ziemię z taczek: wały, groble, nowe brzegi.';
+}
+function setSpeed(s) {
+  if (s === 0) paused = !paused; else { speed = s; paused = false; }
+  $('spPause').setAttribute('aria-pressed', paused);
+  $('sp1').setAttribute('aria-pressed', !paused && speed === 1);
+  $('sp3').setAttribute('aria-pressed', !paused && speed === 3);
+}
+$('toolDig').onclick = () => setTool('dig');
+$('toolRaise').onclick = () => setTool('raise');
+$('spPause').onclick = () => setSpeed(0);
+$('sp1').onclick = () => setSpeed(1);
+$('sp3').onclick = () => setSpeed(3);
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' && e.code === 'Space') return;
+  if (e.code === 'Space') { e.preventDefault(); setSpeed(0); }
+  else if (e.key === 'k' || e.key === 'K' || e.key === '1') setTool('dig');
+  else if (e.key === 's' || e.key === 'S' || e.key === '2') setTool('raise');
+});
+
+function closeHint() { $('hint').hidden = true; }
+$('hintOk').onclick = closeHint;
+
+function notice(text) {
+  const t = $('ticker');
+  t.textContent = text; t.classList.add('show');
+  clearTimeout(tickerTimer);
+  tickerTimer = setTimeout(() => t.classList.remove('show'), 5500);
+}
+
+// ---------- Panel ----------
+function plural(n, one, few, many) {
+  if (n === 1) return one;
+  const d = n % 10, dd = n % 100;
+  return d >= 2 && d <= 4 && !(dd >= 12 && dd <= 14) ? few : many;
+}
+const earthText = e => { const n = Math.round(e * EARTH_UNIT); return `${n} ${plural(n, 'taczka', 'taczki', 'taczek')}`; };
+
+function updateHud() {
+  const v = valley, si = v.seasonIdx, p = v.seasonProgress;
+  $('seasonLabel').innerHTML = `<b>Rok ${v.year}</b> · ${SEASONS[si].name}`;
+  $('seasonTrack').querySelectorAll('i').forEach((el, k) => {
+    el.style.transform = `scaleX(${k < si ? 1 : k === si ? p : 0})`;
+  });
+  $('earthVal').textContent = earthText(v.earth);
+  $('earthBar').style.transform = `scaleX(${clamp01(v.earth * EARTH_UNIT / 200)})`;
+  $('energyVal').textContent = `${Math.floor(v.energy)}%`;
+  $('energyBar').style.transform = `scaleX(${v.energy / ENERGY_MAX})`;
+  const st = v.stats();
+  $('fVillages').textContent = st.villages;
+  $('fPeople').textContent = st.people;
+  $('fForest').textContent = `${st.forest} km²`;
+  $('fSea').textContent = v.reached ? v.reached.when.replace('Rok ', 'rok ') : 'jeszcze nie';
+  $('cardBtn').hidden = !v.reached;
+
+  const log = $('log');
+  while (shownLog < v.log.length) {
+    const e = v.log[shownLog++];
+    const li = document.createElement('li');
+    if (e.kind) li.className = e.kind;
+    li.innerHTML = `<span class="when"></span><span class="text"></span>`;
+    li.firstChild.textContent = e.when; li.lastChild.textContent = e.text;
+    log.prepend(li);
+    if (shownLog > 1 || v.step > 0) notice(e.text);
+  }
+  while (log.children.length > 60) log.lastChild.remove();
+}
+
+// ---------- Pocztówka ----------
+function openPostcard() {
+  const v = valley, st = v.stats();
+  pointer.down = false; pointer.inside = false;          // bez kursora łopaty na zdjęciu
+  renderTerrain(performance.now()); drawOverlay(performance.now());
+  $('pcImg').src = canvas.toDataURL('image/png');
+  $('pcWhen').textContent = v.reached.when;
+  $('pcName').value = v.riverName;
+  $('pcLen').textContent = `${v.reached.length} km`;
+  $('pcVil').textContent = st.villages;
+  $('pcPeople').textContent = st.people;
+  $('pcForest').textContent = `${st.forest} km²`;
+  $('postcard').hidden = false;
+  $('pcStay').focus();
+}
+function closePostcard() { $('postcard').hidden = true; }
+$('pcName').addEventListener('input', e => { valley.riverName = e.target.value.trim(); });
+$('pcStay').onclick = closePostcard;
+$('pcNew').onclick = () => { closePostcard(); newValley(); };
+$('cardBtn').onclick = openPostcard;
+
+let newArmed = 0;
+$('newBtn').onclick = () => {
+  const b = $('newBtn');
+  if (performance.now() - newArmed < 3000) { newValley(); b.textContent = 'Nowa dolina'; newArmed = 0; return; }
+  newArmed = performance.now();
+  b.textContent = 'Na pewno? Kliknij jeszcze raz';
+  setTimeout(() => { if (performance.now() - newArmed >= 3000) b.textContent = 'Nowa dolina'; }, 3100);
+};
+
+function newValley(state) {
+  valley = state ? Valley.fromState(state) : new Valley(Math.floor(Math.random() * 1e9));
+  $('valleyId').textContent = `Dolina nr ${valley.seed % 10000}`;
+  $('log').innerHTML = ''; shownLog = 0;
+  updateHud();
+}
+
+// ---------- Rozmiar ----------
+function resize() {
+  const narrow = matchMedia('(max-width: 860px)').matches;
+  const cw = mapwrap.clientWidth, ch = narrow ? cw * H / W : mapwrap.clientHeight;
+  const w = Math.max(200, Math.min(cw, ch * W / H));
+  cssW = Math.floor(w); cssH = Math.floor(w * H / W);
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+}
+new ResizeObserver(resize).observe(mapwrap);
+
+// ---------- Pętla ----------
+const STEPS_PER_FRAME = 6;
+function frame(t) {
+  const dt = Math.min(0.05, lastT ? (t - lastT) / 1000 : 0.016);
+  lastT = t;
+  const modal = !$('postcard').hidden;
+  if (pointer.down && !modal) useTool(dt);
+  if (!paused && !modal) {
+    stepAcc += dt * 60 * STEPS_PER_FRAME * speed;
+    const n = Math.min(40, Math.floor(stepAcc));
+    stepAcc -= n;
+    valley.tick(n);
+  }
+  if (valley.justReached) { valley.justReached = false; updateHud(); openPostcard(); }
+  renderTerrain(t);
+  drawOverlay(t);
+  if (frameNo++ % 6 === 0) updateHud();
+  requestAnimationFrame(frame);
+}
+
+function start(data) {
+  resize();
+  newValley(data && data.valley);
+  if (data && data.ui) { setTool(data.ui.tool || 'dig'); if (data.ui.hintClosed) closeHint(); }
+  requestAnimationFrame(frame);
+}
+window.claude?.hot?.snapshot?.(() => ({ valley: valley.toState(), ui: { tool, hintClosed: $('hint').hidden } }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
