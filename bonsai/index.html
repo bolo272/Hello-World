@@ -1,0 +1,1197 @@
+<title>Bonsai</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Układ: jedno drzewko na półce pod oknem, pod nim narzędzia; obok zeszyt z notatkami i albumem */
+:root {
+  --bg: #E8E9E3;
+  --paper: #F5F5F0;
+  --ink: #23271F;
+  --muted: #646A5D;
+  --line: #CBCFC3;
+  --accent: #46653A;
+  --accent-ink: #F5F5F0;
+  --accent-soft: #DDE6D3;
+  --cut: #B4472F;
+  --wire: #B0703A;
+  --shadow: rgba(30, 36, 26, 0.28);
+  --wall: #E3E2D9;
+  --wall-2: #CFCEC2;
+  --glow: rgba(255, 247, 222, 0.8);
+  --table: #8E6D51;
+  --table-2: #6C513C;
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-ui: "Figtree", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141613; --paper: #1C1F1B; --ink: #E3E6DC; --muted: #9BA193; --line: #30352D;
+    --accent: #A3C18A; --accent-ink: #141613; --accent-soft: #263222; --cut: #E27A5F; --wire: #D59457;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --wall: #22251F; --wall-2: #161814; --glow: rgba(255, 206, 140, 0.2); --table: #4B3B2D; --table-2: #33281F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141613; --paper: #1C1F1B; --ink: #E3E6DC; --muted: #9BA193; --line: #30352D;
+  --accent: #A3C18A; --accent-ink: #141613; --accent-soft: #263222; --cut: #E27A5F; --wire: #D59457;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --wall: #22251F; --wall-2: #161814; --glow: rgba(255, 206, 140, 0.2); --table: #4B3B2D; --table-2: #33281F;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
+
+.app {
+  display: flex; flex-direction: column; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 16px;
+}
+@media (min-width: 861px) {
+  html, body { height: 100%; }
+  .app { height: 100%; }
+}
+
+.bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 32px; }
+.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 2.4rem; line-height: 1; letter-spacing: 0.01em; }
+.sub { color: var(--muted); font-size: 0.95rem; }
+.season { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.season-label { font-family: var(--font-display); font-style: italic; font-size: 1.35rem; line-height: 1; }
+.season-dots { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.season-dots li { display: flex; align-items: center; gap: 5px; }
+.season-dots li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--muted); }
+.season-dots li.now { color: var(--ink); font-weight: 600; }
+.season-dots li.now::before { background: var(--accent); border-color: var(--accent); }
+
+.stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
+.scene { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.scene-frame { position: relative; flex: 1; min-height: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 16px 34px -22px var(--shadow); background: var(--wall); }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tools { display: flex; gap: 6px; }
+.tool, .btn {
+  font: inherit; font-weight: 500; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.tool svg { width: 20px; height: 20px; flex: none; }
+.tool:hover, .btn:hover { border-color: var(--muted); }
+.tool[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.next { margin-left: auto; padding-inline: 16px; }
+.btn.quiet { background: transparent; }
+.tool:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tool-note { margin: 0; font-size: 0.86rem; color: var(--muted); }
+
+.panel { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 20px; }
+.panel h2 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; }
+.facts { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.facts div { min-width: 0; }
+.facts dt { font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 0; font-size: 1.05rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.journal { flex: 1; min-height: 140px; display: flex; flex-direction: column; }
+.journal ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; overflow: auto; }
+.journal li { font-size: 0.9rem; padding-left: 12px; border-left: 2px solid var(--line); }
+.journal li.warn { border-left-color: var(--cut); }
+.journal li.mentor { border-left-color: var(--accent); font-family: var(--font-display); font-style: italic; font-size: 1.08rem; line-height: 1.3; }
+.journal .when { display: block; font-family: var(--font-ui); font-style: normal; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.album { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.album figure { margin: 0; display: grid; gap: 3px; }
+.album img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); display: block; }
+.album figcaption { font-size: 0.72rem; color: var(--muted); }
+.album .empty { grid-column: 1 / -1; margin: 0; font-size: 0.86rem; color: var(--muted); }
+
+.hint {
+  position: absolute; top: 14px; left: 14px; max-width: min(380px, calc(100% - 28px));
+  padding: 14px 16px; border-radius: 8px; background: var(--paper); color: var(--ink);
+  box-shadow: 0 12px 30px -14px var(--shadow);
+}
+.hint h2 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; line-height: 1.1; }
+.hint p { margin: 0 0 8px; font-size: 0.92rem; }
+.hint ul { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; font-size: 0.88rem; }
+.ticker {
+  position: absolute; left: 12px; bottom: 12px; max-width: min(440px, calc(100% - 24px));
+  padding: 6px 12px; border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 0.9rem;
+  box-shadow: 0 6px 18px -10px var(--shadow); opacity: 0; transform: translateY(4px);
+  transition: opacity .35s, transform .35s; pointer-events: none;
+}
+.ticker.show { opacity: 0.96; transform: none; }
+
+.modal-layer {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(14, 18, 12, 0.55);
+}
+.expo {
+  width: min(760px, 100%); background: var(--paper); color: var(--ink); border-radius: 10px; padding: 18px;
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .6);
+}
+.expo > img { width: 100%; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); display: block; align-self: start; }
+.expo-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.expo .eyebrow { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.expo h2 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 600; font-size: 2rem; line-height: 1.05; text-wrap: balance; }
+.expo label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.expo input { font: italic 600 1.3rem var(--font-display); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; width: 100%; }
+.expo .quote { margin: 0; font-family: var(--font-display); font-style: italic; font-size: 1.15rem; line-height: 1.3; }
+.expo .strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.expo .strip img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); display: block; }
+.expo .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: auto; }
+
+@media (max-width: 860px) {
+  .stage { grid-template-columns: 1fr; }
+  .scene-frame { flex: none; height: min(118vw, 600px); }
+  .panel { overflow: visible; }
+  .journal ol { max-height: 320px; }
+  .expo { grid-template-columns: 1fr; }
+  .hint { top: 8px; left: 8px; max-width: calc(100% - 16px); padding: 12px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker { transition: none; }
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Bonsai</h1>
+      <span class="sub" id="treeSub">Grab · 4 lata</span>
+    </div>
+    <div class="season" aria-live="polite">
+      <div class="season-label" id="seasonLabel">Rok 1 · jesień</div>
+      <ol class="season-dots" id="seasonDots"><li>wiosna</li><li>lato</li><li>jesień</li><li>zima</li></ol>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="scene">
+      <div class="scene-frame" id="frame">
+        <canvas id="scene" aria-label="Drzewko w doniczce. Wybierz narzędzie i kliknij albo przeciągnij gałąź."></canvas>
+        <div class="ticker" id="ticker" role="status"></div>
+        <div class="hint" id="hint">
+          <h2>To grab. Ma cztery lata.</h2>
+          <p>Przez kilka lat będziesz go kształtować. Na każde cięcie odpowie po swojemu, ale dopiero wiosną.</p>
+          <ul>
+            <li><b>Nożyczki:</b> najedź na gałąź, a na czerwono zobaczysz, co zniknie. Kliknij, żeby uciąć.</li>
+            <li><b>Drut:</b> przeciągnij młodą gałąź, żeby ją wygiąć. Stare gałęzie są sztywne.</li>
+            <li><b>Dalej</b> przenosi do następnej pory roku. Nic się nie spieszy.</li>
+          </ul>
+          <button class="btn primary" id="hintOk">Zaczynam</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="tools" role="group" aria-label="Narzędzie">
+          <button class="tool" id="toolCut" aria-pressed="true" title="Nożyczki (N)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.4L20 17M8.2 16.6L20 7"/></svg>
+            Nożyczki
+          </button>
+          <button class="tool" id="toolWire" aria-pressed="false" title="Drut (D)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 20C8 16 9 10 20 5"/><path d="M7 15.5l2.2 2M9.6 12.3l2.2 2M12.8 9.6l2 2.1M16.2 7.4l1.6 2.3"/></svg>
+            Drut
+          </button>
+        </div>
+        <button class="btn" id="rotateBtn" title="Obróć doniczkę (O)">Obróć doniczkę</button>
+        <button class="btn" id="undoBtn" disabled title="Cofnij (Ctrl+Z)">Cofnij</button>
+        <button class="btn primary next" id="nextBtn">Dalej: zima</button>
+      </div>
+      <p class="tool-note" id="toolNote">Najedź na gałąź: na czerwono to, co zniknie. Cięcie budzi uśpione pąki poniżej.</p>
+    </section>
+
+    <aside class="panel">
+      <section>
+        <h2>Drzewko</h2>
+        <dl class="facts">
+          <div><dt>Wysokość</dt><dd id="fHeight">0 cm</dd></div>
+          <div><dt>Pień</dt><dd id="fTrunk">0 cm</dd></div>
+          <div><dt>Końce pędów</dt><dd id="fTips">0</dd></div>
+          <div><dt>Cięcia</dt><dd id="fCuts">0</dd></div>
+        </dl>
+      </section>
+      <section class="journal">
+        <h2>Zeszyt</h2>
+        <ol id="log"></ol>
+      </section>
+      <section>
+        <h2>Album</h2>
+        <div class="album" id="album"><p class="empty">Co jesień trafi tu zdjęcie drzewka.</p></div>
+      </section>
+      <div><button class="btn quiet" id="newBtn">Nowe drzewko</button></div>
+    </aside>
+  </main>
+</div>
+
+<div class="modal-layer" id="expo" hidden>
+  <div class="expo" role="dialog" aria-modal="true" aria-labelledby="expoTitle">
+    <img id="expoImg" alt="Drzewko na jesiennej wystawie">
+    <div class="expo-body">
+      <div>
+        <div class="eyebrow" id="expoWhen">Rok 5 · jesień</div>
+        <h2 id="expoTitle">Jesienna wystawa w domu kultury</h2>
+      </div>
+      <label for="expoName">Podpis pod drzewkiem
+        <input id="expoName" maxlength="32" autocomplete="off" placeholder="Grab">
+      </label>
+      <p class="quote" id="expoQuote"></p>
+      <dl class="facts">
+        <div><dt>Wiek</dt><dd id="eAge">0</dd></div>
+        <div><dt>Wysokość</dt><dd id="eHeight">0 cm</dd></div>
+        <div><dt>Pień</dt><dd id="eTrunk">0 cm</dd></div>
+        <div><dt>Cięcia</dt><dd id="eCuts">0</dd></div>
+      </dl>
+      <div class="strip" id="expoStrip"></div>
+      <div class="actions">
+        <button class="btn" id="expoNew">Nowe drzewko</button>
+        <button class="btn primary" id="expoStay">Niech rośnie dalej</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== TREE-START =====
+const SEASONS = ['wiosna', 'lato', 'jesień', 'zima'];
+const UNIT_CM = 0.15;
+const FINAL_YEAR = 5;
+const P = {
+  lambda: 0.56,               // dominacja wierzchołkowa
+  alpha: 4,                   // siła z jednostki światła
+  vmax: 110,                  // ile przyrostów doniczka uniesie w roku
+  summer: 0.3,                // druga, letnia fala wzrostu
+  lMin: 3.5, lMax: 10,        // długość międzywęźla
+  maxNodes: 6, angle: 0.8,
+  grid: 9, A: 0.35, B: 0.5, depth: 4, shade: 0.45,  // cień rzucany przez liście
+  r0: 0.42, pipe: 2.4,        // grubość końca pędu i reguła rurek
+  up: 0.32, upLat: 0.06, toLight: 0.12, noise: 0.35,
+};
+const WINDOW_X = -0.55;                 // okno po lewej, trochę z góry
+
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const seasonOf = turn => ((turn % 4) + 4) % 4;
+const yearOf = turn => Math.floor((turn + 1) / 4) + 1;
+const yearStart = turn => 4 * Math.floor((turn + 1) / 4) - 1;   // zimowa tura bieżącego roku
+function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
+function plural(n, one, few, many) {
+  if (n === 1) return one;
+  const d = n % 10, dd = n % 100;
+  return d >= 2 && d <= 4 && !(dd >= 12 && dd <= 14) ? few : many;
+}
+
+function rng(t) {
+  let a = (t.rs = (t.rs + 0x6D2B79F5) | 0);
+  a = Math.imul(a ^ a >>> 15, 1 | a);
+  a = a + Math.imul(a ^ a >>> 7, 61 | a) ^ a;
+  return ((a ^ a >>> 14) >>> 0) / 4294967296;
+}
+
+function newSeg(t, fields) {
+  return Object.assign({
+    id: t.nextId++, p: -1, main: true, side: 0, rel: 0, rest: 0, len: 8, r: P.r0, born: t.turn, k: 0,
+    tip: false, buds: [], spur: 0, wire: null, scar: null, dead: null, shade: 0,
+    abs: 0, x0: 0, y0: 0, x1: 0, y1: 0, Q: 0, Qm: 0, Ql: 0, v: 0, vTip: 0, qTip: 0,
+  }, fields);
+}
+
+function kidMap(t) {
+  const kids = new Map(t.segs.map(s => [s.id, []]));
+  for (const s of t.segs) if (s.p >= 0) kids.get(s.p).push(s);
+  return kids;
+}
+
+// Rodzic zawsze stoi w tablicy przed dziećmi, więc wystarczy jedno przejście
+function layout(t, gfn) {
+  const by = new Map();
+  for (const s of t.segs) {
+    by.set(s.id, s);
+    const par = s.p >= 0 ? by.get(s.p) : null;
+    s.abs = (par ? par.abs : Math.PI / 2) + s.rel;
+    s.x0 = par ? par.x1 : 0; s.y0 = par ? par.y1 : 0;
+    const L = s.len * (gfn ? gfn(s) : 1);
+    s.x1 = s.x0 + Math.cos(s.abs) * L; s.y1 = s.y0 + Math.sin(s.abs) * L;
+  }
+  return by;
+}
+
+function lightField(t, pts) {
+  const skew = -t.lx * 1.1;
+  const G = P.grid, D = P.depth;
+  let minx = -60, maxx = 60, miny = -10, maxy = 60;
+  for (let n = 0; n < pts.length; n += 2) {
+    const x = pts[n], y = pts[n + 1];
+    if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+  }
+  minx -= G * (D + 2); maxx += G * (D * 2 + 2); miny -= G * (D + 2); maxy += G * 2;
+  const cols = Math.ceil((maxx - minx) / G) + 1, rows = Math.ceil((maxy - miny) / G) + 1;
+  const g = new Float32Array(cols * rows);
+  for (let n = 0; n < pts.length; n += 2) {
+    const ci = Math.floor((pts[n] - minx) / G), cj = Math.floor((pts[n + 1] - miny) / G);
+    let a = P.A;
+    for (let k = 0; k <= D; k++, a *= P.B) {
+      const j = cj - k; if (j < 0) break;
+      const sh = Math.round(k * skew);
+      for (let d = -k; d <= k; d++) { const i = ci + d + sh; if (i >= 0 && i < cols) g[j * cols + i] += a; }
+    }
+  }
+  return (x, y) => {
+    const i = Math.floor((x - minx) / G), j = Math.floor((y - miny) / G);
+    const s = (i >= 0 && j >= 0 && i < cols && j < rows) ? g[j * cols + i] : 0;
+    return clamp01(1 - Math.max(0, s - P.A) * P.shade);
+  };
+}
+
+const budActive = (t, b) => b.wake || t.turn - b.t <= 5;
+
+// Wzrost: światło zbierane od końców pędów, siła rozdzielana od korzenia (model Borcherta-Hondy)
+function grow(t, share, flush) {
+  layout(t);
+  const kids = kidMap(t);
+  const pts = [];
+  for (const s of t.segs) if (!s.dead && (s.tip || s.spur || s.born > t.turn - 5)) pts.push(s.x1, s.y1);
+  const light = lightField(t, pts);
+  for (let n = t.segs.length - 1; n >= 0; n--) {
+    const s = t.segs[n];
+    s.v = 0; s.vTip = 0;
+    if (s.dead) { s.Q = s.Qm = s.Ql = 0; continue; }
+    const L = light(s.x1, s.y1);
+    s.qTip = s.tip ? L : 0;
+    let qm = s.qTip, ql = 0;
+    for (const c of kids.get(s.id)) { if (c.dead) continue; if (c.main) qm += c.Q; else ql += c.Q; }
+    for (const b of s.buds) { b.q = budActive(t, b) ? L * 0.9 : 0; b.v = 0; ql += b.q; }
+    s.Qm = qm; s.Ql = ql; s.Q = qm + ql;
+  }
+  const root = t.segs[0];
+  root.v = Math.min(P.alpha * root.Q, P.vmax) * share * (t.stress ? 0.6 : 1);
+  for (const s of t.segs) {
+    if (s.dead || s.v <= 0) continue;
+    const den = P.lambda * s.Qm + (1 - P.lambda) * s.Ql;
+    if (den <= 0) continue;
+    const vm = s.v * P.lambda * s.Qm / den, vl = s.v - vm;
+    if (s.tip) s.vTip = vm;
+    for (const c of kids.get(s.id)) {
+      if (c.dead) continue;
+      if (c.main) c.v = s.Qm > 0 ? vm * c.Q / s.Qm : 0;
+      else c.v = s.Ql > 0 ? vl * c.Q / s.Ql : 0;
+    }
+    if (s.Ql > 0) for (const b of s.buds) b.v = vl * b.q / s.Ql;
+  }
+  let maxy = 0;
+  for (const s of t.segs) if (s.y1 > maxy) maxy = s.y1;
+  const st = { shoots: 0, woken: 0, topV: 0, allV: 0 };
+  const count = t.segs.length;
+  for (let n = 0; n < count; n++) {
+    const s = t.segs[n];
+    if (s.dead) continue;
+    const high = s.y1 > maxy * 0.7;
+    if (s.tip && s.vTip > 0) {
+      if (s.vTip >= 0.6) {
+        shoot(t, s, s.abs, s.vTip, true, 0); s.tip = false; st.shoots++;
+        st.allV += s.vTip; if (high) st.topV += s.vTip;
+      } else if (s.vTip >= 0.25 && !flush) s.spur = Math.min(4, s.spur + 2);
+    }
+    for (const b of s.buds.slice()) {
+      if (b.v >= 0.6) {
+        shoot(t, s, s.abs + b.side * P.angle, b.v, false, b.side);
+        s.buds.splice(s.buds.indexOf(b), 1); st.shoots++;
+        if (b.wake) st.woken++;
+        st.allV += b.v; if (high) st.topV += b.v;
+      } else if (b.v >= 0.25 && !flush) s.spur = Math.min(4, s.spur + 1);
+    }
+  }
+  for (const s of t.segs) for (const b of s.buds) b.wake = false;
+  if (!flush) for (const s of t.segs) if (!s.dead) s.r += 0.045 * Math.sqrt(s.Q);   // słój roczny
+  pipe(t);
+  st.top = st.allV > 0 ? st.topV / st.allV : 0;
+  return st;
+}
+
+function shoot(t, from, dir, v, isMain, side) {
+  const n = Math.max(1, Math.min(P.maxNodes, Math.round(v)));
+  const len = P.lMin + (P.lMax - P.lMin) * clamp01((v - 1) / 6);
+  let par = from, d = dir;
+  const s0 = rng(t) < 0.5 ? 1 : -1;
+  for (let k = 0; k < n; k++) {
+    const up = isMain ? P.up : P.upLat;
+    const vx = Math.cos(d) + t.lx * P.toLight + (rng(t) - 0.5) * P.noise;
+    const vy = Math.sin(d) + up + (rng(t) - 0.5) * P.noise;
+    d = Math.atan2(vy, vx);
+    const seg = newSeg(t, {
+      p: par.id, main: k > 0 || isMain, side: k === 0 ? side : 0, rel: angDiff(d, par.abs),
+      len: len * (0.85 + rng(t) * 0.3), born: t.turn, k, tip: k === n - 1,
+      buds: [{ side: k % 2 ? s0 : -s0, t: t.turn, wake: false }], abs: d,
+    });
+    seg.rest = seg.rel;
+    t.segs.push(seg);
+    par = seg;
+  }
+}
+
+function pipe(t) {
+  const kids = kidMap(t), e = P.pipe;
+  for (let n = t.segs.length - 1; n >= 0; n--) {
+    const s = t.segs[n];
+    if (s.dead) continue;
+    let sum = s.tip ? P.r0 ** e : 0;
+    if (s.spur) sum += (P.r0 * 0.7) ** e;
+    for (const c of kids.get(s.id)) if (!c.dead) sum += c.r ** e;
+    if (sum > 0) s.r = Math.max(s.r, sum ** (1 / e));
+  }
+}
+
+function killSubtree(t, id, kids, by) {
+  const stack = [by.get(id)];
+  while (stack.length) {
+    const s = stack.pop();
+    s.dead = t.turn; s.tip = false; s.buds = []; s.spur = 0;
+    for (const c of kids.get(s.id)) stack.push(c);
+  }
+}
+
+// Pod koniec lata gałęzie bez światła usychają
+function shed(t) {
+  const by = layout(t), kids = kidMap(t);
+  const pts = [], ys = yearStart(t.turn);
+  for (const s of t.segs) {
+    if (s.dead) continue;
+    if (s.born > ys) pts.push(s.x1, s.y1);
+    for (let k = 0; k < s.spur; k++) pts.push(s.x1, s.y1);
+  }
+  const light = lightField(t, pts);
+  for (let n = t.segs.length - 1; n >= 0; n--) {
+    const s = t.segs[n];
+    if (s.dead) { s.cq = s.cn = 0; continue; }
+    const L = light(s.x1, s.y1);
+    let cq = 0, cn = 0;
+    if (s.tip) { if (L < 0.12) s.tip = false; else { cq += L; cn++; } }
+    if (s.spur) { cq += L; cn++; }
+    for (const b of s.buds) if (budActive(t, b)) { cq += L * 0.9; cn++; }
+    for (const c of kids.get(s.id)) if (!c.dead) { cq += c.cq; cn += c.cn; }
+    s.cq = cq; s.cn = cn;
+  }
+  let killed = 0;
+  for (const s of t.segs) {
+    if (s.dead || s.main || s.p < 0) continue;
+    const avg = s.cn ? s.cq / s.cn : 0;
+    s.shade = avg < 0.22 ? s.shade + 1 : 0;
+    if (s.shade >= 2) { killSubtree(t, s.id, kids, by); killed++; }
+  }
+  return killed;
+}
+
+function endYear(t) {
+  let set = 0;
+  for (const s of t.segs) {
+    s.spur = 0;
+    if (s.wire != null && t.turn - s.wire >= 3) { s.rest = s.rel; s.wire = null; set++; }
+  }
+  return set;
+}
+
+const leafy = (t, s) => !s.dead && seasonOf(t.turn) !== 3 && s.born > yearStart(t.turn);
+function leafCount(t) {
+  let n = 0;
+  for (const s of t.segs) { if (leafy(t, s)) n++; if (seasonOf(t.turn) !== 3) n += s.spur; }
+  return n;
+}
+
+function subtreeIds(t, id) {
+  const ids = new Set([id]);
+  for (const s of t.segs) if (ids.has(s.p)) ids.add(s.id);
+  return ids;
+}
+
+function cut(t, id) {
+  const by = new Map(t.segs.map(s => [s.id, s]));
+  const s = by.get(id);
+  if (!s || s.p < 0) return null;
+  const ids = subtreeIds(t, id);
+  let leaves = 0, len = 0;
+  for (const q of t.segs) if (ids.has(q.id)) { len += q.len; if (leafy(t, q)) leaves += 1 + q.spur; }
+  t.segs = t.segs.filter(q => !ids.has(q.id));
+  const par = by.get(s.p);
+  if (s.main) par.tip = false;
+  par.scar = t.turn; par.scarR = Math.min(s.r, par.r);
+  if (!s.dead) {
+    let a = par;
+    for (let k = 0; k < 3 && a; k++) { for (const b of a.buds) b.wake = true; a = by.get(a.p); }
+    if (!par.buds.length) par.buds.push({ side: s.side || (rng(t) < 0.5 ? 1 : -1), t: t.turn, wake: true });
+  }
+  t.cuts++; t.cutsYear++; t.leafCut += leaves;
+  return { leaves, len, dead: !!s.dead };
+}
+
+function mirror(t) {
+  // obrót doniczki: drzewo w lustrze, okno zostaje na miejscu
+  for (const s of t.segs) {
+    s.rel = -s.rel; s.rest = -s.rest; s.side = -s.side;
+    for (const b of s.buds) b.side = -b.side;
+  }
+}
+
+function bendChain(t, id) {
+  const by = new Map(t.segs.map(s => [s.id, s]));
+  let s = by.get(id);
+  if (!s) return [];
+  const chain = [s];
+  while (chain.length < 4 && s.main && s.p >= 0) {
+    const p = by.get(s.p);
+    if (!p || p.p < 0) break;
+    chain.unshift(p); s = p;
+  }
+  return chain;
+}
+const bendLimit = s => s.dead ? 0 : s.r < 0.9 ? 1.0 : s.r < 1.6 ? 0.55 : s.r < 2.6 ? 0.25 : 0.07;
+
+function metrics(t) {
+  layout(t);
+  const kids = kidMap(t);
+  let minx = 0, maxx = 0, maxy = 0, tips = 0, deadBranches = 0, sx = 0, n = 0;
+  const by = new Map(t.segs.map(s => [s.id, s]));
+  for (const s of t.segs) {
+    if (s.dead) { const p = by.get(s.p); if (p && !p.dead) deadBranches++; continue; }
+    minx = Math.min(minx, s.x1); maxx = Math.max(maxx, s.x1); maxy = Math.max(maxy, s.y1);
+    if (s.tip) tips++;
+    sx += s.x1; n++;
+  }
+  const root = t.segs[0];
+  let mid = root, branches = 0;
+  for (let s = root; s;) {
+    branches += kids.get(s.id).filter(c => !c.main && !c.dead).length;
+    if (mid === root && s.y1 > maxy * 0.5) mid = s;
+    s = kids.get(s.id).find(c => c.main && !c.dead);
+  }
+  return {
+    height: maxy, width: maxx - minx, lean: (sx / Math.max(1, n)) / Math.max(25, (maxx - minx) / 2),
+    tips, dead: deadBranches, trunk: root.r, taper: root.r / Math.max(0.3, mid.r), branches, ram: tips / Math.max(1, branches),
+  };
+}
+
+const say = (t, text, kind = '') => t.log.push({ when: `Rok ${yearOf(t.turn)} · ${SEASONS[seasonOf(t.turn)]}`, text, kind });
+
+function mentor(t) {
+  const m = metrics(t), year = yearOf(t.turn);
+  const lines = [
+    ['dead', m.dead >= 3, 'Suche gałązki w środku korony. Za gęsto, światło tam nie dochodzi. Wytnij je i przerzedź górę.'],
+    ['lean', Math.abs(m.lean) > 0.4, 'Cały ciągnie do okna. Obracaj doniczkę co jakiś czas, to się wyrówna.'],
+    ['tall', m.height > 1.5 * m.width && m.height > 110, 'Ucieka w górę jak tyczka. Skróć wierzchołek, a siła pójdzie w dolne gałęzie.'],
+    ['lazy', t.cutsYear === 0 && year > 1, 'Cały rok bez nożyczek? Drzewo rośnie, jak chce. To też jakaś filozofia.'],
+    ['big', m.height * UNIT_CM > 34, 'Robi się z tego drzewo do ogrodu, nie na parapet. Bonsai to sztuka trzymania w ryzach.'],
+    ['ram', m.ram > 6, 'O, gałęzie się zagęszczają. To już zaczyna wyglądać na bonsai.'],
+    ['taper', m.taper > 2.2, 'Pień ładnie się zwęża ku górze. Tak trzymaj.'],
+    ['calm', true, 'Cierpliwości. Grab nie lubi pośpiechu.'],
+  ];
+  const pick = lines.find(l => l[1] && l[0] !== t.lastMentor) || lines[lines.length - 1];
+  t.lastMentor = pick[0];
+  t.cutsYear = 0;
+  return `Pan Zdzisław: ${pick[2]}`;
+}
+
+function verdict(t) {
+  const m = metrics(t), good = [];
+  if (m.taper > 2) good.push('pień ładnie się zwęża');
+  if (m.ram > 5) good.push('gałęzie gęsto się rozgałęziają');
+  if (Math.abs(m.lean) < 0.25) good.push('korona jest w równowadze');
+  if (m.dead === 0) good.push('nie ma ani jednej suchej gałązki');
+  if (m.height * UNIT_CM < 28) good.push('trzyma rozmiar');
+  let text = good.length ? good.slice(0, 2).join(' i ') + '.' : 'jeszcze dużo pracy przed nim.';
+  text = text[0].toUpperCase() + text.slice(1);
+  const tip = m.dead >= 3 ? ' Suche gałązki bym wyciął przed wystawą.'
+    : m.height > 1.5 * m.width ? ' Wierzchołek bym jeszcze skrócił.'
+    : ' Za rok przynieś go znowu.';
+  return `Pan Zdzisław: ${text}${tip}`;
+}
+
+function newTree(seed) {
+  const t = { seed, rs: seed | 0, turn: -13, lx: 0, segs: [], nextId: 0, stress: 0, cuts: 0, cutsYear: 0, leafCut: 0, leafStart: 0,
+    log: [], album: [], name: '', done: false, lastMentor: '' };
+  const root = newSeg(t, { rel: (rng(t) - 0.5) * 0.12, len: 12, r: 1, tip: true, born: -20 });
+  root.rest = root.rel;
+  t.segs.push(root);
+  // szkółka: trzy lata i jedno lato swobodnego wzrostu
+  for (let y = 0; y < 4; y++) {
+    t.turn++; grow(t, 1, false);                       // w gruncie światło pada z góry
+    t.turn++; grow(t, P.summer, true);
+    t.turn++; shed(t);
+    if (y < 3) { t.turn++; endYear(t); }
+  }
+  for (const s of t.segs) s.r *= 1.8;
+  t.lx = WINDOW_X;
+  t.cutsYear = 0;
+  t.leafStart = leafCount(t);
+  say(t, 'Pan Zdzisław: Grab, cztery lata, prosto ze szkółki. Jesienią i zimą najlepiej widać, co zostawić, a co uciąć.', 'mentor');
+  return t;
+}
+
+// Przejście do następnej pory roku
+function advance(t) {
+  const prev = seasonOf(t.turn);
+  if ((prev === 0 || prev === 1) && t.leafStart > 0 && t.leafCut / t.leafStart > 0.45) {
+    t.stress = 1;
+    say(t, 'Drzewko straciło naraz dużo liści. Następnej wiosny urośnie słabiej.', 'warn');
+  }
+  t.turn++;
+  const s = seasonOf(t.turn);
+  if (s === 0) {
+    const st = grow(t, 1, false);
+    t.stress = 0;
+    say(t, st.shoots ? `Wiosna. Wybiło ${st.shoots} ${plural(st.shoots, 'nowy pęd', 'nowe pędy', 'nowych pędów')}.` : 'Wiosna. Drzewko ledwo się obudziło.');
+    if (st.woken) say(t, `Przy cięciach obudziły się uśpione pąki (${st.woken}).`);
+    if (st.top > 0.55) say(t, 'Najwięcej siły poszło w wierzchołek.');
+  } else if (s === 1) {
+    const st = grow(t, P.summer, true);
+    say(t, st.shoots ? `Lato. Liście ciemnieją, dorosło jeszcze ${st.shoots} ${plural(st.shoots, 'pęd', 'pędy', 'pędów')}.` : 'Lato. Liście ciemnieją.');
+  } else if (s === 2) {
+    const k = shed(t);
+    say(t, 'Jesień. Grab żółknie.');
+    if (k) say(t, k === 1 ? 'Jedna gałązka w cieniu korony uschła.' : `W cieniu korony uschło kilka gałązek (${k}).`, 'warn');
+  } else {
+    const w = endYear(t);
+    say(t, 'Zima. Liście opadły, widać rysunek gałęzi.');
+    if (w) say(t, 'Zdjąłem druty. Gałęzie trzymają nowy kształt.');
+    say(t, mentor(t), 'mentor');
+  }
+  t.leafCut = 0;
+  t.leafStart = leafCount(t);
+}
+// ===== TREE-END =====
+
+// ---------- Scena ----------
+const $ = id => document.getElementById(id);
+const canvas = $('scene'), ctx = canvas.getContext('2d');
+const frameEl = $('frame');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tree, tool = 'cut', dpr = 1, cw = 0, ch = 0;
+const cam = { s: 0, ox: 0, oy: 0, fx: 1, ready: false };
+const anim = { grow: -1e9, flip: -1e9, advanced: 0, fall: 0, cp: 2 };
+let falling = [], hover = null, selected = null, drag = null, down = null;
+let undoStack = [], theme = {}, shownLog = 0, tickerTimer = 0, lastT = 0, themeT = 0;
+let leafBuf = new Float32Array(4 * 4000), leafN = 0;
+
+const BARK_YOUNG = [118, 96, 64], BARK_MID = [126, 116, 102], BARK_OLD = [140, 138, 131], BARK_DEAD = [164, 156, 144];
+const LEAF = { spring: [170, 198, 104], summer: [84, 126, 62], gold: [216, 174, 64], rust: [186, 114, 50], brown: [150, 114, 78] };
+const POT = [74, 104, 110];
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const rgb = (c, k = 1, a = 1) => `rgba(${c[0] * k | 0}, ${c[1] * k | 0}, ${c[2] * k | 0}, ${a})`;
+const hash = id => { const x = Math.sin(id * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement), v = k => cs.getPropertyValue(k).trim();
+  theme = { wall: v('--wall'), wall2: v('--wall-2'), glow: v('--glow'), table: v('--table'), table2: v('--table-2'), cut: v('--cut'), wire: v('--wire') };
+}
+
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cw = Math.max(10, Math.round(frameEl.clientWidth * dpr)); ch = Math.max(10, Math.round(frameEl.clientHeight * dpr));
+  canvas.width = cw; canvas.height = ch;
+  cam.ready = false;
+}
+new ResizeObserver(resize).observe(frameEl);
+
+function growFactor(s, now) {
+  if (s.born !== tree.turn || seasonOf(tree.turn) > 1) return 1;
+  const g = clamp01((now - anim.grow) / 650 - s.k * 0.22);
+  return 1 - (1 - g) * (1 - g);
+}
+
+function fitCamera() {
+  let minx = -95, maxx = 95, maxy = 40;
+  for (const s of tree.segs) { minx = Math.min(minx, s.x1 - 12); maxx = Math.max(maxx, s.x1 + 12); maxy = Math.max(maxy, s.y1 + 14); }
+  const half = Math.max(-minx, maxx);
+  const tableY = ch * 0.86;
+  const target = Math.min((cw * 0.46) / half, (tableY - ch * 0.05) / (maxy + 34), 4.2 * dpr);
+  cam.s = cam.ready ? cam.s + (target - cam.s) * 0.06 : target;
+  cam.ready = true;
+  cam.ox = cw / 2; cam.oy = tableY - 34 * cam.s; cam.table = tableY;
+}
+const X = x => cam.ox + x * cam.s * cam.fx;
+const Y = y => cam.oy - y * cam.s;
+
+function drawRoom() {
+  const g = ctx.createLinearGradient(0, 0, 0, cam.table);
+  g.addColorStop(0, theme.wall2); g.addColorStop(1, theme.wall);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, cam.table);
+  const r = ctx.createRadialGradient(-cw * 0.05, ch * 0.25, 0, -cw * 0.05, ch * 0.25, cw * 0.95);
+  r.addColorStop(0, theme.glow); r.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = r; ctx.fillRect(0, 0, cw, cam.table);
+  const tg = ctx.createLinearGradient(0, cam.table, 0, ch);
+  tg.addColorStop(0, theme.table); tg.addColorStop(1, theme.table2);
+  ctx.fillStyle = tg; ctx.fillRect(0, cam.table, cw, ch - cam.table);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'; ctx.fillRect(0, cam.table, cw, Math.max(1, dpr * 1.5));
+  ctx.beginPath(); ctx.ellipse(cam.ox + 14 * cam.s, cam.table + 2 * cam.s, 96 * cam.s, 7 * cam.s, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'; ctx.fill();
+}
+
+function drawPot() {
+  const s = cam.s, cx = cam.ox;
+  const top = cam.oy - 1 * s, bot = cam.table - 3 * s, wt = 80 * s, wb = 70 * s;
+  const g = ctx.createLinearGradient(cx - wt, 0, cx + wt, 0);
+  g.addColorStop(0, rgb(POT, 1.18)); g.addColorStop(0.35, rgb(POT)); g.addColorStop(1, rgb(POT, 0.62));
+  ctx.fillStyle = rgb(POT, 0.5);
+  ctx.fillRect(cx - wb + 6 * s, bot, 14 * s, 3 * s); ctx.fillRect(cx + wb - 20 * s, bot, 14 * s, 3 * s);
+  ctx.beginPath();
+  ctx.moveTo(cx - wt, top); ctx.lineTo(cx + wt, top); ctx.lineTo(cx + wb, bot); ctx.lineTo(cx - wb, bot); ctx.closePath();
+  ctx.fillStyle = g; ctx.fill();
+  ctx.fillStyle = rgb(POT, 0.82); ctx.fillRect(cx - wt - 3 * s, top - 4 * s, (wt + 3 * s) * 2, 5 * s);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.14)'; ctx.fillRect(cx - wt - 3 * s, top - 4 * s, (wt + 3 * s) * 2, 1.2 * s);
+  // ziemia i mech
+  ctx.fillStyle = '#4A3A2B';
+  ctx.beginPath(); ctx.ellipse(cx, cam.oy - 2.5 * s, wt - 1 * s, 3.2 * s, 0, Math.PI, 0); ctx.fill();
+  for (let k = 0; k < 26; k++) {
+    const h = hash(k + 300), x = cx + (h - 0.5) * (wt * 1.7), y = cam.oy - 2 * s - hash(k + 900) * 2.6 * s;
+    ctx.fillStyle = k % 3 ? 'rgba(98, 128, 66, 0.9)' : 'rgba(126, 152, 80, 0.9)';
+    ctx.beginPath(); ctx.ellipse(x, y, (2.5 + h * 4) * s, (1.2 + h) * s, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function barkColor(s) {
+  if (s.dead) return rgb(BARK_DEAD);
+  const age = tree.turn - s.born;
+  return rgb(age < 4 ? mix(BARK_YOUNG, BARK_MID, age / 4) : mix(BARK_MID, BARK_OLD, clamp01((age - 4) / 10)));
+}
+
+function leafColor(h) {
+  const cp = anim.cp;
+  let c;
+  if (cp <= 1) c = mix(LEAF.spring, LEAF.summer, cp);
+  else if (cp <= 2.5) c = mix(LEAF.summer, h < 0.62 ? LEAF.gold : LEAF.rust, clamp01((cp - 1) * (1.05 + h * 0.9)));
+  else c = LEAF.brown;
+  return rgb(c, 0.88 + h * 0.22);
+}
+
+function drawLeaf(x, y, ang, len, col, alpha) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha = alpha;
+  ctx.beginPath(); ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(len * 0.45, -len * 0.34, len, 0);
+  ctx.quadraticCurveTo(len * 0.45, len * 0.34, 0, 0);
+  ctx.fillStyle = col; ctx.fill();
+  if (len > 7 * dpr) {
+    ctx.beginPath(); ctx.moveTo(len * 0.1, 0); ctx.lineTo(len * 0.88, 0);
+    ctx.strokeStyle = 'rgba(40, 50, 20, 0.22)'; ctx.lineWidth = 0.7 * dpr; ctx.stroke();
+  }
+  ctx.restore();
+}
+const screenAngle = a => Math.atan2(-Math.sin(a), Math.cos(a) * cam.fx);
+
+function drawTree(now) {
+  const season = seasonOf(tree.turn);
+  const gfn = s => growFactor(s, now);
+  layout(tree, gfn);
+  const ghost = hover && tool === 'cut' && !drag ? subtreeIds(tree, hover) : null;
+  const chainIds = tool === 'wire' ? new Set((drag ? drag.chain : hover != null ? bendChain(tree, hover) : []).map(s => s.id)) : null;
+  // nasada korzeni
+  const root = tree.segs[0], rw = root.r * cam.s;
+  ctx.fillStyle = barkColor(root);
+  ctx.beginPath();
+  ctx.moveTo(X(-root.r * 3.2), Y(0)); ctx.quadraticCurveTo(X(-root.r * 1.1), Y(0.5), X(-root.r * 0.95), Y(root.r * 2.6));
+  ctx.lineTo(X(root.r * 0.95), Y(root.r * 2.6)); ctx.quadraticCurveTo(X(root.r * 1.1), Y(0.5), X(root.r * 3.4), Y(0));
+  ctx.closePath(); ctx.fill();
+  // gałęzie: najpierw obrys, potem kora
+  ctx.lineCap = 'round';
+  for (let pass = 0; pass < 2; pass++) {
+    for (const s of tree.segs) {
+      const w = Math.max(0.9 * dpr, s.r * 2 * cam.s * 0.92);
+      ctx.beginPath(); ctx.moveTo(X(s.x0), Y(s.y0)); ctx.lineTo(X(s.x1), Y(s.y1));
+      if (pass === 0) { ctx.strokeStyle = s.dead ? 'rgba(60, 55, 50, 0.25)' : 'rgba(44, 38, 32, 0.55)'; ctx.lineWidth = w + 1.4 * dpr; }
+      else { ctx.strokeStyle = barkColor(s); ctx.lineWidth = w; }
+      ctx.stroke();
+    }
+  }
+  // światło od okna na grubszych gałęziach
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+  for (const s of tree.segs) {
+    const w = s.r * 2 * cam.s * 0.92;
+    if (w < 4 * dpr || s.dead) continue;
+    const off = -w * 0.22;
+    ctx.lineWidth = w * 0.26;
+    ctx.beginPath(); ctx.moveTo(X(s.x0) + off, Y(s.y0)); ctx.lineTo(X(s.x1) + off, Y(s.y1)); ctx.stroke();
+  }
+  // ślady cięć
+  for (const s of tree.segs) {
+    if (s.scar == null) continue;
+    const age = tree.turn - s.scar;
+    if (age > 8) continue;
+    const a = 1 - age / 9;
+    ctx.beginPath(); ctx.arc(X(s.x1), Y(s.y1), Math.max(1.2 * dpr, (s.scarR || P.r0) * cam.s * 0.9), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(214, 196, 158, ${a})`; ctx.fill();
+    ctx.lineWidth = 0.8 * dpr; ctx.strokeStyle = `rgba(80, 64, 44, ${a * 0.6})`; ctx.stroke();
+  }
+  // drut
+  ctx.strokeStyle = theme.wire; ctx.lineWidth = 1.2 * dpr;
+  for (const s of tree.segs) {
+    if (s.wire == null) continue;
+    const x0 = X(s.x0), y0 = Y(s.y0), x1 = X(s.x1), y1 = Y(s.y1);
+    const L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L;
+    const w = Math.max(0.9 * dpr, s.r * 2 * cam.s * 0.92) / 2 + 1.2 * dpr, step = Math.max(2.6 * dpr, 2.2 * cam.s);
+    for (let d = step / 2; d < L; d += step) {
+      const px = x0 + ux * d, py = y0 + uy * d;
+      ctx.beginPath(); ctx.moveTo(px - uy * w - ux * step * 0.3, py + ux * w - uy * step * 0.3);
+      ctx.lineTo(px + uy * w + ux * step * 0.3, py - ux * w + uy * step * 0.3); ctx.stroke();
+    }
+  }
+  // liście
+  leafN = 0;
+  if (season !== 3) {
+    const leafLen = Math.max(4 * dpr, 8.5 * cam.s), sprout = clamp01((now - anim.grow) / 1400);
+    for (const s of tree.segs) {
+      if (s.dead) continue;
+      const fade = ghost && ghost.has(s.id) ? 0.22 : 1;
+      if (leafy(tree, s)) {
+        const g = growFactor(s, now), h = hash(s.id);
+        const side = s.buds.length ? s.buds[0].side : (s.k % 2 ? 1 : -1);
+        const a = s.abs + side * (0.85 + h * 0.5);
+        addLeaf(X(s.x1), Y(s.y1), screenAngle(a), leafLen * (0.8 + h * 0.4) * g, h, fade);
+      }
+      for (let k = 0; k < s.spur; k++) {
+        const h = hash(s.id * 7 + k), a = s.abs + (k - (s.spur - 1) / 2) * 0.9 + 0.25;
+        const g = s.born === tree.turn || season > 1 ? 1 : sprout;
+        addLeaf(X(s.x1), Y(s.y1), screenAngle(a), leafLen * (0.7 + h * 0.3) * (season === 0 ? sprout : g), h, fade);
+      }
+    }
+  } else {
+    // grab trzyma zimą część zeschłych liści na dolnych gałęziach
+    let maxy = 0; for (const s of tree.segs) maxy = Math.max(maxy, s.y1);
+    const leafLen = Math.max(4 * dpr, 8 * cam.s);
+    for (const s of tree.segs) {
+      if (s.dead || s.born <= tree.turn - 4 || s.y1 > maxy * 0.6) continue;
+      const h = hash(s.id);
+      if (h > 0.14) continue;
+      addLeaf(X(s.x1), Y(s.y1), screenAngle(s.abs - 0.9 - h), leafLen * 0.85, h, 1);
+    }
+  }
+  // podgląd cięcia i gięcia
+  if (ghost) {
+    ctx.strokeStyle = theme.cut; ctx.globalAlpha = 0.8;
+    for (const s of tree.segs) {
+      if (!ghost.has(s.id)) continue;
+      ctx.lineWidth = Math.max(1.4 * dpr, s.r * 2 * cam.s * 0.92);
+      ctx.beginPath(); ctx.moveTo(X(s.x0), Y(s.y0)); ctx.lineTo(X(s.x1), Y(s.y1)); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const hs = tree.segs.find(s => s.id === hover);
+    if (hs) {
+      const x = X(hs.x0), y = Y(hs.y0);
+      ctx.beginPath(); ctx.arc(x, y, 4 * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = theme.cut; ctx.stroke();
+      let len = 0; for (const s of tree.segs) if (ghost.has(s.id)) len += s.len;
+      ctx.font = `600 ${12 * dpr}px Figtree, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const label = hs.dead ? 'sucha gałązka' : `−${Math.max(1, Math.round(len * UNIT_CM))} cm`;
+      ctx.lineWidth = 3 * dpr; ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'; ctx.strokeText(label, x + 9 * dpr, y - 9 * dpr);
+      ctx.fillStyle = theme.cut; ctx.fillText(label, x + 9 * dpr, y - 9 * dpr);
+    }
+  }
+  if (chainIds && chainIds.size) {
+    ctx.strokeStyle = drag && drag.stiff ? theme.cut : theme.wire; ctx.globalAlpha = 0.65;
+    for (const s of tree.segs) {
+      if (!chainIds.has(s.id)) continue;
+      ctx.lineWidth = Math.max(2 * dpr, s.r * 2 * cam.s * 0.92 + 2 * dpr);
+      ctx.beginPath(); ctx.moveTo(X(s.x0), Y(s.y0)); ctx.lineTo(X(s.x1), Y(s.y1)); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function addLeaf(x, y, a, len, h, alpha) {
+  if (len < 0.5) return;
+  drawLeaf(x, y, a, len, leafColor(h), alpha);
+  if (leafN < 4000) { leafBuf[leafN * 4] = x; leafBuf[leafN * 4 + 1] = y; leafBuf[leafN * 4 + 2] = a; leafBuf[leafN * 4 + 3] = h; leafN++; }
+}
+
+function drawFalling(now) {
+  if (!falling.length) return;
+  const t = (now - anim.fall) / 1000;
+  let alive = 0;
+  for (const p of falling) {
+    const tt = Math.max(0, t - p.delay);
+    const y = Math.min(cam.table - 2 * dpr, p.y + tt * p.vy * dpr + tt * tt * 18 * dpr);
+    const x = p.x + Math.sin(tt * 2.4 + p.ph) * 10 * dpr + tt * 14 * dpr;
+    const fade = y >= cam.table - 2 * dpr ? clamp01(1 - (tt - p.land) / 1.5) : 1;
+    if (y >= cam.table - 2 * dpr && !p.land) p.land = tt;
+    if (fade <= 0) continue;
+    alive++;
+    drawLeaf(x, y, p.a + tt * p.spin, p.len, p.col, fade);
+  }
+  if (!alive) falling = [];
+}
+
+function render(now) {
+  if (!cam.ready || now - themeT > 1000) { readTheme(); themeT = now; }
+  fitCamera();
+  const fp = clamp01((now - anim.flip) / 600);
+  cam.fx = fp < 1 ? -Math.cos(Math.PI * fp) : 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  drawRoom();
+  drawPot();
+  drawTree(now);
+  drawFalling(now);
+}
+
+// ---------- Sterowanie ----------
+function pointerPos(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr }; }
+function hitTest(px, py, touch) {
+  const lim = (touch ? 18 : 10) * dpr;
+  let best = null, bd = lim;
+  for (const s of tree.segs) {
+    const x0 = X(s.x0), y0 = Y(s.y0), x1 = X(s.x1), y1 = Y(s.y1);
+    const dx = x1 - x0, dy = y1 - y0, L2 = dx * dx + dy * dy || 1;
+    const u = clamp01(((px - x0) * dx + (py - y0) * dy) / L2);
+    const d = Math.hypot(px - x0 - u * dx, py - y0 - u * dy) - s.r * cam.s * 0.9;
+    if (d <= bd) { bd = d; best = s.id; }
+  }
+  return best;
+}
+
+function snapshot() {
+  return JSON.stringify({ segs: tree.segs, nextId: tree.nextId, rs: tree.rs, cuts: tree.cuts, cutsYear: tree.cutsYear, leafCut: tree.leafCut });
+}
+function pushUndo() { undoStack.push(snapshot()); $('undoBtn').disabled = false; }
+function undo() {
+  const s = undoStack.pop();
+  if (!s) return;
+  Object.assign(tree, JSON.parse(s));
+  hover = null; selected = null;
+  $('undoBtn').disabled = !undoStack.length;
+  updatePanel();
+}
+
+function doCut(id) {
+  if (id === tree.segs[0].id) { notice('Pnia przy ziemi nie tnę. Spróbuj wyżej.'); return; }
+  pushUndo();
+  const before = tree.leafCut;
+  const res = cut(tree, id);
+  hover = null; selected = null;
+  if (res && tree.leafStart > 0 && before / tree.leafStart <= 0.45 && tree.leafCut / tree.leafStart > 0.45)
+    notice('To już prawie połowa liści. Drzewko odczuje to wiosną.');
+  updatePanel();
+}
+
+canvas.addEventListener('pointerdown', e => {
+  closeHint();
+  const p = pointerPos(e), touch = e.pointerType === 'touch';
+  const id = hitTest(p.x, p.y, touch);
+  down = { x: p.x, y: p.y, id, touch };
+  if (tool === 'wire' && id != null) {
+    canvas.setPointerCapture(e.pointerId);
+    const chain = bendChain(tree, id);
+    const pivot = chain[0];
+    drag = { chain, base: chain.map(s => s.rel), px: X(pivot.x0), py: Y(pivot.y0), a0: Math.atan2(p.y - Y(pivot.y0), p.x - X(pivot.x0)), pushed: false, stiff: false };
+  }
+  e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  const p = pointerPos(e);
+  if (drag) {
+    let da = Math.atan2(p.y - drag.py, p.x - drag.px) - drag.a0;
+    while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    da *= -cam.fx;                                        // ekran ma oś y w dół
+    if (!drag.pushed && Math.abs(da) > 0.01) { pushUndo(); drag.pushed = true; }
+    drag.stiff = false;
+    drag.chain.forEach((s, k) => {
+      const want = drag.base[k] + da / drag.chain.length, lim = bendLimit(s);
+      const v = Math.max(s.rest - lim, Math.min(s.rest + lim, want));
+      if (Math.abs(v - want) > 0.01) drag.stiff = true;
+      s.rel = v;
+    });
+    return;
+  }
+  if (e.pointerType !== 'touch') hover = hitTest(p.x, p.y, false);
+});
+canvas.addEventListener('pointerup', e => {
+  const p = pointerPos(e);
+  if (drag) {
+    if (drag.pushed) {
+      for (const s of drag.chain) if (Math.abs(s.rel - s.rest) > 0.02) s.wire = tree.turn;
+      if (drag.stiff) notice('Ta gałąź jest już za gruba, żeby ją mocniej wygiąć.');
+    }
+    drag = null; down = null; return;
+  }
+  if (!down) return;
+  const moved = Math.hypot(p.x - down.x, p.y - down.y) > 8 * dpr;
+  if (tool === 'cut' && !moved && down.id != null) {
+    if (down.touch) {
+      if (selected === down.id) doCut(down.id);
+      else { selected = down.id; hover = down.id; }
+    } else doCut(down.id);
+  } else if (down.touch && down.id == null) { selected = null; hover = null; }
+  down = null;
+});
+canvas.addEventListener('pointerleave', () => { if (!drag && !selected) hover = null; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+function setTool(t) {
+  tool = t; hover = null; selected = null;
+  $('toolCut').setAttribute('aria-pressed', t === 'cut');
+  $('toolWire').setAttribute('aria-pressed', t === 'wire');
+  const touch = matchMedia('(pointer: coarse)').matches;
+  $('toolNote').textContent = t === 'cut'
+    ? (touch ? 'Dotknij gałęzi, żeby zobaczyć, co zniknie, i jeszcze raz, żeby uciąć.' : 'Najedź na gałąź: na czerwono to, co zniknie. Cięcie budzi uśpione pąki poniżej.')
+    : 'Przeciągnij gałąź. Młode gną się łatwo, stare prawie wcale. Drut trzyma kształt przez rok.';
+}
+$('toolCut').onclick = () => setTool('cut');
+$('toolWire').onclick = () => setTool('wire');
+$('undoBtn').onclick = undo;
+$('rotateBtn').onclick = () => { pushUndo(); mirror(tree); anim.flip = performance.now(); };
+$('nextBtn').onclick = next;
+$('hintOk').onclick = closeHint;
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || !$('expo').hidden) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+  else if (e.key === 'n' || e.key === 'N') setTool('cut');
+  else if (e.key === 'd' || e.key === 'D') setTool('wire');
+  else if (e.key === 'o' || e.key === 'O') $('rotateBtn').click();
+});
+
+function closeHint() { $('hint').hidden = true; }
+function notice(text) {
+  const t = $('ticker');
+  t.textContent = text; t.classList.add('show');
+  clearTimeout(tickerTimer);
+  tickerTimer = setTimeout(() => t.classList.remove('show'), 5000);
+}
+
+function next() {
+  closeHint();
+  const now = performance.now();
+  const into = seasonOf(tree.turn + 1);
+  if (into === 3 && !reduceMotion) {
+    falling = []; anim.fall = now;
+    const n = Math.min(leafN, 320);
+    for (let k = 0; k < n; k++) {
+      const i = Math.floor(Math.random() * leafN) * 4;
+      falling.push({ x: leafBuf[i], y: leafBuf[i + 1], a: leafBuf[i + 2], col: leafColor(leafBuf[i + 3]), len: Math.max(4 * dpr, 8 * cam.s) * 0.9,
+        vy: 30 + Math.random() * 40, ph: Math.random() * 6, spin: (Math.random() - 0.5) * 3, delay: Math.random() * 1.2, land: 0 });
+    }
+  }
+  advance(tree);
+  undoStack = []; $('undoBtn').disabled = true;
+  hover = null; selected = null;
+  anim.advanced = now;
+  if (into === 0) { anim.grow = now; anim.cp = 0; }
+  updatePanel();
+}
+
+// ---------- Panel ----------
+function updatePanel() {
+  const t = tree, season = seasonOf(t.turn), year = yearOf(t.turn), age = 3 + year;
+  $('seasonLabel').textContent = `Rok ${year} · ${SEASONS[season]}`;
+  $('seasonDots').querySelectorAll('li').forEach((li, k) => li.classList.toggle('now', k === season));
+  $('treeSub').textContent = `${t.name || 'Grab'} · ${age} ${plural(age, 'rok', 'lata', 'lat')}`;
+  $('nextBtn').textContent = `Dalej: ${SEASONS[seasonOf(t.turn + 1)]}`;
+  const m = metrics(t);
+  $('fHeight').textContent = `${Math.round(m.height * UNIT_CM)} cm`;
+  $('fTrunk').textContent = `${(m.trunk * 2 * UNIT_CM).toFixed(1).replace('.', ',')} cm`;
+  $('fTips').textContent = m.tips;
+  $('fCuts').textContent = t.cuts;
+  const log = $('log');
+  if (shownLog > t.log.length) { log.innerHTML = ''; shownLog = 0; }
+  while (shownLog < t.log.length) {
+    const e = t.log[shownLog++];
+    const li = document.createElement('li');
+    if (e.kind) li.className = e.kind;
+    li.innerHTML = '<span class="when"></span><span class="text"></span>';
+    li.firstChild.textContent = e.when; li.lastChild.textContent = e.text;
+    log.prepend(li);
+  }
+  renderAlbum();
+}
+
+function renderAlbum() {
+  const el = $('album');
+  if (el.querySelectorAll('figure').length === tree.album.length && tree.album.length) return;
+  el.innerHTML = '';
+  if (!tree.album.length) { el.innerHTML = '<p class="empty">Co jesień trafi tu zdjęcie drzewka.</p>'; return; }
+  for (const a of tree.album) {
+    const f = document.createElement('figure');
+    f.innerHTML = '<img alt=""><figcaption></figcaption>';
+    f.firstChild.src = a.src; f.firstChild.alt = `Drzewko w roku ${a.year}`; f.lastChild.textContent = `Rok ${a.year}`;
+    el.append(f);
+  }
+}
+
+function photo() {
+  const w = 360, h = Math.round(w * ch / cw);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.84);
+}
+
+function maybePhoto(now) {
+  const year = yearOf(tree.turn);
+  if (seasonOf(tree.turn) !== 2 || tree.album.some(a => a.year === year)) return;
+  if (anim.cp < 1.97 || now - anim.advanced < 1300 || drag) return;
+  const keep = hover; hover = null; render(now); hover = keep;
+  tree.album.push({ year, src: photo() });
+  renderAlbum();
+  if (year >= FINAL_YEAR && !tree.done) openExpo();
+}
+
+function openExpo() {
+  tree.done = true;
+  const m = metrics(tree), age = 3 + yearOf(tree.turn);
+  $('expoImg').src = canvas.toDataURL('image/png');
+  $('expoWhen').textContent = `Rok ${yearOf(tree.turn)} · jesień`;
+  $('expoName').value = tree.name;
+  $('expoQuote').textContent = verdict(tree);
+  $('eAge').textContent = `${age} ${plural(age, 'rok', 'lata', 'lat')}`;
+  $('eHeight').textContent = `${Math.round(m.height * UNIT_CM)} cm`;
+  $('eTrunk').textContent = `${(m.trunk * 2 * UNIT_CM).toFixed(1).replace('.', ',')} cm`;
+  $('eCuts').textContent = tree.cuts;
+  const strip = $('expoStrip'); strip.innerHTML = '';
+  for (const a of tree.album) { const i = document.createElement('img'); i.src = a.src; i.alt = `Rok ${a.year}`; strip.append(i); }
+  $('expo').hidden = false;
+  $('expoStay').focus();
+}
+$('expoName').addEventListener('input', e => { tree.name = e.target.value.trim(); updatePanel(); });
+$('expoStay').onclick = () => { $('expo').hidden = true; };
+$('expoNew').onclick = () => { $('expo').hidden = true; startTree(); };
+
+let newArmed = 0;
+$('newBtn').onclick = () => {
+  const b = $('newBtn');
+  if (performance.now() - newArmed < 3000) { newArmed = 0; b.textContent = 'Nowe drzewko'; startTree(); return; }
+  newArmed = performance.now();
+  b.textContent = 'Na pewno? Kliknij jeszcze raz';
+  setTimeout(() => { if (performance.now() - newArmed >= 3000) b.textContent = 'Nowe drzewko'; }, 3100);
+};
+
+function startTree(saved) {
+  tree = saved || newTree(Math.floor(Math.random() * 1e9));
+  undoStack = []; $('undoBtn').disabled = true;
+  hover = null; selected = null; drag = null; falling = [];
+  const season = seasonOf(tree.turn);
+  anim.cp = season === 3 ? 3 : season; anim.grow = -1e9; anim.advanced = performance.now();
+  $('log').innerHTML = ''; shownLog = 0;
+  $('album').innerHTML = '';
+  cam.ready = false;
+  updatePanel();
+}
+
+// ---------- Pętla ----------
+function frame(now) {
+  const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
+  lastT = now;
+  const season = seasonOf(tree.turn), target = season === 3 ? 3 : season;
+  if (anim.cp < target) anim.cp = Math.min(target, anim.cp + dt * (reduceMotion ? 10 : 0.8));
+  render(now);
+  maybePhoto(now);
+  requestAnimationFrame(frame);
+}
+
+function start(data) {
+  resize();
+  startTree(data && data.tree);
+  if (data && data.ui) { setTool(data.ui.tool || 'cut'); if (data.ui.hintClosed) closeHint(); }
+  else setTool('cut');
+  requestAnimationFrame(frame);
+}
+window.claude?.hot?.snapshot?.(() => ({ tree, ui: { tool, hintClosed: $('hint').hidden } }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
