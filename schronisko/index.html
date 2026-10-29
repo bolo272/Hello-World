@@ -1,0 +1,1404 @@
+<title>Schronisko</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+/* Układ: przekrój schroniska w zamieci jak scena teatru, pod nią ludzie; obok księga gospodarza z zapasami, piecem i dziennikiem */
+:root {
+  --bg: #E7EBEE;
+  --paper: #F7F8F9;
+  --ink: #1C232B;
+  --muted: #5B6672;
+  --line: #C9D0D7;
+  --ember: #B4502A;
+  --ember-ink: #FFF7F0;
+  --ember-soft: #F4DFD3;
+  --frost: #3A76A6;
+  --good: #3B7A49;
+  --bad: #B0392D;
+  --shadow: rgba(16, 24, 32, 0.28);
+  --font-display: "Bitter", Georgia, "Times New Roman", serif;
+  --font-ui: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1419; --paper: #161D24; --ink: #E2E7EC; --muted: #96A2AE; --line: #29333D;
+    --ember: #E27B48; --ember-ink: #1A0E07; --ember-soft: #3A2318; --frost: #7DB3DE;
+    --good: #79BD86; --bad: #EC7A6C; --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1419; --paper: #161D24; --ink: #E2E7EC; --muted: #96A2AE; --line: #29333D;
+  --ember: #E27B48; --ember-ink: #1A0E07; --ember-soft: #3A2318; --frost: #7DB3DE;
+  --good: #79BD86; --bad: #EC7A6C; --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
+button, select { font: inherit; color: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app {
+  display: flex; flex-direction: column; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 24px;
+  max-width: 1440px; margin: 0 auto;
+}
+
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 32px; }
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 2rem; line-height: 1; letter-spacing: -0.01em; }
+.brand .sub { color: var(--muted); font-size: 0.95rem; }
+.today { display: flex; align-items: baseline; gap: 14px; }
+.day { font-family: var(--font-display); font-weight: 600; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.day small { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+.wx { font-weight: 600; color: var(--frost); font-variant-numeric: tabular-nums; }
+.forecast { flex: 1; min-width: 220px; max-width: 420px; display: grid; gap: 2px; }
+.forecast svg { width: 100%; height: 34px; display: block; }
+.fc-legend { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+.stagecol { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.scene { position: relative; width: 100%; aspect-ratio: 16 / 9.2; border-radius: 6px; overflow: hidden; background: #1A2738; box-shadow: 0 18px 40px -26px var(--shadow); }
+.scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#snow { pointer-events: none; z-index: 5; }
+.hut { position: absolute; inset: 0; z-index: 2; }
+.walls { position: absolute; left: 12%; top: 32%; width: 58%; height: 52%; background: #3B2A1F; border-radius: 2px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); }
+.roof { position: absolute; left: 8.5%; top: 7%; width: 65%; height: 27%; background: #4A3A31; clip-path: polygon(0 100%, 50% 0, 100% 100%); }
+.roof::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #E8EEF3 0 22%, transparent 22%); clip-path: polygon(0 100%, 50% 0, 100% 100%); opacity: 0.92; }
+.chimney { position: absolute; left: 39.5%; top: 6%; width: 3.6%; height: 12%; background: #5D5650; border-top: 4px solid #E8EEF3; }
+.smoke { position: absolute; left: 50%; top: -6px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: rgba(220, 226, 232, 0.5); animation: smoke 3.4s linear infinite; opacity: 0; }
+.smoke:nth-child(2) { animation-delay: 1.1s; }
+.smoke:nth-child(3) { animation-delay: 2.2s; }
+@keyframes smoke { 0% { transform: translate(0, 0) scale(0.6); opacity: 0.7; } 100% { transform: translate(var(--drift, 30px), -60px) scale(2.4); opacity: 0; } }
+.porch-roof { position: absolute; left: 69%; top: 58%; width: 16.5%; height: 5.5%; background: #4A3A31; clip-path: polygon(0 0, 100% 70%, 100% 100%, 0 100%); }
+.porch-roof::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #E8EEF3 0 45%, transparent 45%); clip-path: polygon(0 0, 100% 70%, 100% 100%, 0 100%); }
+
+.room {
+  position: absolute; display: flex; flex-direction: column; justify-content: space-between; gap: 2px;
+  padding: 5px 6px; border: 0; border-radius: 2px; cursor: pointer; text-align: left;
+  color: #F6EFE6; background: var(--room, #556); overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transition: background-color .5s;
+}
+.room:hover { box-shadow: inset 0 0 0 2px rgba(255, 240, 220, 0.55); }
+.room.sel { box-shadow: inset 0 0 0 2px #FFE2BE, 0 0 0 2px #FFE2BE; z-index: 3; }
+.room:focus-visible { outline: 2px solid #FFE2BE; outline-offset: 2px; }
+.room.roofroom { clip-path: polygon(0 100%, 50% 0, 100% 100%); justify-content: flex-end; align-items: center; text-align: center; padding-bottom: 6px; }
+.room.porch { background: transparent; box-shadow: none; border-left: 3px solid #4A3A31; border-right: 3px solid #4A3A31; justify-content: flex-end; }
+.room.porch .r-name { color: #DDE5EC; }
+.room.closed { background: #2F353C; color: #A9B2BB; }
+.room.gone { background: transparent; box-shadow: none; outline: 1px dashed rgba(220, 228, 236, 0.4); outline-offset: -4px; color: #AEB8C2; }
+.r-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.r-name { font-size: clamp(0.62rem, 1.05vw, 0.82rem); font-weight: 600; letter-spacing: 0.02em; line-height: 1.1; }
+.r-t { font-family: var(--font-display); font-weight: 700; font-size: clamp(0.8rem, 1.6vw, 1.25rem); font-variant-numeric: tabular-nums; line-height: 1; }
+.roofroom .r-head { flex-direction: column; align-items: center; }
+.r-tag { font-size: clamp(0.56rem, 0.9vw, 0.7rem); opacity: 0.85; line-height: 1.1; }
+.r-ppl { display: flex; flex-wrap: wrap; gap: 2px; min-height: 0; }
+.roofroom .r-ppl { justify-content: center; }
+.tok {
+  width: clamp(14px, 1.9vw, 22px); height: clamp(14px, 1.9vw, 22px); border-radius: 50%;
+  display: inline-grid; place-items: center; font-size: clamp(0.5rem, 0.9vw, 0.68rem); font-weight: 700;
+  background: var(--hc, #E3E8DC); color: #1E1A16; position: relative;
+}
+.tok.child { transform: scale(0.82); }
+.tok.sick::after { content: ""; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; background: #E04B3A; box-shadow: 0 0 0 1px #1E1A16; }
+.fire { position: absolute; left: 50%; bottom: 8%; width: 26%; height: 22%; margin-left: -13%; border-radius: 40% 40% 10% 10%; background: radial-gradient(ellipse at 50% 90%, #FFD58A 0%, #F08A3C 45%, rgba(200, 70, 30, 0) 75%); animation: flicker 0.9s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes flicker { from { transform: scale(0.94, 0.9); opacity: 0.85; } to { transform: scale(1.04, 1.06); opacity: 1; } }
+.away { position: absolute; right: 10px; top: 10px; z-index: 6; max-width: 46%; padding: 5px 9px; border-radius: 5px; background: rgba(12, 18, 26, 0.72); color: #DDE5EC; font-size: 0.78rem; }
+.hint {
+  position: absolute; left: 12px; bottom: 12px; z-index: 7; max-width: min(420px, calc(100% - 24px));
+  padding: 12px 14px; border-radius: 8px; background: var(--paper); color: var(--ink); box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6);
+}
+.hint p { margin: 0 0 8px; font-size: 0.9rem; }
+
+.roompanel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+.roompanel h2 { margin: 0; font-family: var(--font-display); font-size: 1.1rem; }
+.roompanel p { margin: 2px 0 0; font-size: 0.88rem; color: var(--muted); }
+.roomacts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--paper); border-radius: 6px; padding: 6px 11px; cursor: pointer; font-weight: 600; font-size: 0.88rem;
+  transition: border-color .15s, background-color .15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.warm { background: var(--ember); border-color: var(--ember); color: var(--ember-ink); }
+.btn.danger { color: var(--bad); }
+.btn:focus-visible, .seg button:focus-visible, select:focus-visible, .choice:focus-visible, .endday:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+.people h2, .side h3 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+.people .legend { margin: -4px 0 10px; font-size: 0.82rem; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.pcard { min-width: 0; display: grid; gap: 5px; padding: 9px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+.pcard.gone { opacity: 0.55; }
+.p-top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.p-top b { font-size: 0.98rem; }
+.p-top .role { font-size: 0.76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.hbar i { display: block; height: 100%; background: var(--good); }
+.hbar i.mid { background: #C9922E; }
+.hbar i.low { background: var(--bad); }
+.p-meta { display: flex; justify-content: space-between; gap: 6px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.delta.neg { color: var(--bad); font-weight: 600; }
+.delta.pos { color: var(--good); font-weight: 600; }
+.pcard select { width: 100%; padding: 4px 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); font-size: 0.86rem; }
+.pcard .fixed { font-size: 0.84rem; color: var(--muted); padding: 4px 0; }
+
+.side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.supplies, .moods { display: grid; gap: 8px; }
+.res { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: baseline; }
+.res .k { font-weight: 600; }
+.res .v { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.res .sub { grid-column: 1 / -1; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mood { display: grid; grid-template-columns: 74px 1fr 34px; gap: 8px; align-items: center; font-size: 0.88rem; }
+.mood .bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.mood .bar i { display: block; height: 100%; background: var(--ember); transition: width .4s; }
+.mood .bar.trust i { background: var(--frost); }
+.mood .n { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--paper); padding: 6px 4px; cursor: pointer; display: grid; gap: 0; line-height: 1.2; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button b { font-size: 0.86rem; }
+.seg button small { font-size: 0.72rem; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ember-soft); box-shadow: inset 0 -3px 0 var(--ember); }
+.rules ul { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 0.86rem; }
+.rules li::before { content: "§ "; color: var(--ember); font-weight: 700; }
+.rules .none { color: var(--muted); }
+.rules .none::before { content: ""; }
+.endday {
+  border: 0; border-radius: 8px; padding: 13px 16px; cursor: pointer; background: var(--ember); color: var(--ember-ink);
+  font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;
+}
+.warn { margin: -6px 0 0; display: grid; gap: 3px; font-size: 0.84rem; color: var(--bad); }
+.warn:empty { display: none; }
+.journal ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; max-height: 360px; overflow: auto; }
+.journal li { padding-left: 10px; border-left: 2px solid var(--line); font-size: 0.86rem; }
+.journal li.choice { border-left-color: var(--ember); }
+.journal li.death { border-left-color: var(--bad); }
+.journal .d { display: block; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.layer {
+  position: fixed; inset: 0; z-index: 30; display: flex; overflow: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(8, 12, 18, 0.62);
+}
+.sheet {
+  margin: auto; width: min(600px, 100%); background: var(--paper); color: var(--ink); border-radius: 8px; padding: 22px 22px 18px;
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.7); display: grid; gap: 12px; border-top: 4px solid var(--ember);
+}
+.sheet.wide { width: min(760px, 100%); }
+.sheet .eyebrow { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.sheet h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; line-height: 1.15; text-wrap: balance; }
+.story { font-family: var(--font-display); font-size: 1.02rem; line-height: 1.55; display: grid; gap: 10px; }
+.story p { margin: 0; }
+.report { margin: 0; padding: 10px 12px; list-style: none; display: grid; gap: 3px; background: var(--bg); border-radius: 6px; font-size: 0.88rem; }
+.report:empty { display: none; }
+.choices { display: grid; gap: 8px; }
+.choice {
+  display: grid; gap: 2px; text-align: left; padding: 10px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--bg); transition: border-color .15s, background-color .15s;
+}
+.choice:hover:not(:disabled) { border-color: var(--ember); background: var(--ember-soft); }
+.choice b { font-weight: 600; }
+.choice small { color: var(--muted); font-size: 0.8rem; }
+.choice:disabled { opacity: 0.5; cursor: default; }
+.result { display: grid; gap: 12px; }
+.result p { margin: 0; font-family: var(--font-display); font-style: italic; font-size: 1.02rem; }
+.result .btn { justify-self: end; }
+.rulecard { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.rulecard b { font-family: var(--font-display); }
+.rulecard p { margin: 0; grid-column: 1; font-size: 0.86rem; }
+.rulecard small { grid-column: 1; color: var(--muted); font-size: 0.8rem; }
+.rulecard .btn { grid-row: 1 / span 3; grid-column: 2; }
+.fates { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.fates li { display: grid; grid-template-columns: 110px 1fr; gap: 10px; font-size: 0.9rem; }
+.fates li b { font-weight: 600; }
+.fates li.dead b { color: var(--bad); }
+.fates li span { color: var(--muted); }
+.decisions { margin: 0; padding-left: 18px; font-size: 0.86rem; color: var(--muted); display: grid; gap: 2px; }
+.quote { margin: 0; font-family: var(--font-display); font-style: italic; font-size: 1.15rem; }
+.endstats { font-weight: 600; }
+
+.night { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #16202C, #05080C); color: #C9D4DE; opacity: 0; transition: opacity .45s; pointer-events: none; }
+.night.on { opacity: 1; pointer-events: auto; }
+.night p { font-family: var(--font-display); font-size: 1.4rem; margin: 0; text-align: center; padding: 0 20px; }
+
+.mobile-end { display: none; }
+@media (max-width: 960px) {
+  .app { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .side .endday { display: none; }
+  .mobile-end {
+    display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; border-radius: 0;
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    box-shadow: 0 -10px 24px -14px var(--shadow);
+  }
+  .layout { grid-template-columns: 1fr; }
+  .scene { aspect-ratio: 4 / 3.3; }
+  .roompanel { grid-template-columns: 1fr; }
+  .roomacts { justify-content: flex-start; }
+  .journal ol { max-height: 260px; }
+  .fates li { grid-template-columns: 1fr; gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smoke, .fire { animation: none; }
+  .night { transition: none; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Schronisko</h1>
+      <span class="sub">pod Połoniną · luty</span>
+    </div>
+    <div class="today">
+      <div class="day" id="dayLabel">Dzień 1 <small>z 30</small></div>
+      <div class="wx" id="wxLabel">−8°C</div>
+    </div>
+    <div class="forecast">
+      <svg id="forecast" viewBox="0 0 300 34" preserveAspectRatio="none" aria-label="Prognoza temperatury na 30 dni"></svg>
+      <div class="fc-legend" id="fcLegend">Prognoza z ostatniego komunikatu radiowego</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stagecol">
+      <div class="scene" id="scene">
+        <canvas id="bg"></canvas>
+        <div class="hut" id="hut"></div>
+        <canvas id="snow"></canvas>
+        <div class="away" id="awayChip" hidden></div>
+        <div class="hint" id="hint" hidden>
+          <p><b>Tak mija dzień.</b> Kliknij pomieszczenie, żeby je zamknąć, ocieplić albo rozebrać na opał. Niżej przydzielasz ludziom zajęcia. Po prawej ustawiasz piec i racje. Cyfry przy ludziach pokazują, ile zdrowia stracą lub zyskają tej nocy.</p>
+          <button class="btn warm" id="hintOk">Rozumiem</button>
+        </div>
+      </div>
+      <div class="roompanel" id="roomPanel"></div>
+      <section class="people">
+        <h2>Ludzie</h2>
+        <p class="legend">Drewno i wnyki to praca na mrozie. Kuchnia oszczędza jedzenie, opieka leczy chorych, naprawy kończą prace w pokojach.</p>
+        <div class="cards" id="people"></div>
+      </section>
+    </section>
+
+    <aside class="side">
+      <section class="supplies" aria-label="Zapasy">
+        <div class="res"><span class="k">Drewno</span><span class="v" id="woodV">0</span><span class="sub" id="woodS"></span></div>
+        <div class="res"><span class="k">Jedzenie</span><span class="v" id="foodV">0</span><span class="sub" id="foodS"></span></div>
+      </section>
+      <section class="moods" aria-label="Nastroje">
+        <div class="mood"><span>Nadzieja</span><div class="bar"><i id="hopeBar"></i></div><span class="n" id="hopeN">0</span></div>
+        <div class="mood"><span>Zaufanie</span><div class="bar trust"><i id="trustBar"></i></div><span class="n" id="trustN">0</span></div>
+      </section>
+      <section>
+        <h3>Piec</h3>
+        <div class="seg" id="stoveSeg" role="group" aria-label="Piec"></div>
+      </section>
+      <section>
+        <h3>Racje</h3>
+        <div class="seg" id="rationSeg" role="group" aria-label="Racje"></div>
+      </section>
+      <section class="rules">
+        <h3>Zasady schroniska</h3>
+        <ul id="rulesList"></ul>
+        <button class="btn" id="rulesBtn">Wprowadź zasadę</button>
+      </section>
+      <button class="endday" id="endBtn">Zakończ dzień 1</button>
+      <div class="warn" id="warnings" role="status"></div>
+      <section class="journal">
+        <h3>Dziennik</h3>
+        <ol id="log"></ol>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="layer" id="eventLayer" hidden>
+  <article class="sheet" role="dialog" aria-modal="true" aria-labelledby="evTitle">
+    <div class="eyebrow" id="evEyebrow">Księga schroniska</div>
+    <h2 id="evTitle"></h2>
+    <ul class="report" id="evReport"></ul>
+    <div class="story" id="evText"></div>
+    <div class="choices" id="evChoices"></div>
+    <div class="result" id="evResult" hidden><p id="evResultText"></p><button class="btn warm" id="evNext">Dalej</button></div>
+  </article>
+</div>
+
+<div class="layer" id="rulesLayer" hidden>
+  <article class="sheet" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="eyebrow">Ostatnia strona zeszytu</div>
+    <h2 id="rulesTitle">Zasady schroniska</h2>
+    <p id="rulesNote" style="margin:0;font-size:.9rem;color:var(--muted)"></p>
+    <div id="rulesCards"></div>
+    <button class="btn" id="rulesClose" style="justify-self:end">Zamknij</button>
+  </article>
+</div>
+
+<div class="layer" id="endLayer" hidden>
+  <article class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+    <div class="eyebrow" id="endEyebrow">Koniec</div>
+    <h2 id="endTitle"></h2>
+    <div class="story" id="endText"></div>
+    <p class="endstats" id="endStats"></p>
+    <ul class="fates" id="endFates"></ul>
+    <div>
+      <h3 style="margin:4px 0 6px;font-family:var(--font-display);font-size:1rem">Twoje decyzje</h3>
+      <ol class="decisions" id="endDecisions"></ol>
+    </div>
+    <p class="quote" id="endQuote"></p>
+    <button class="btn warm" id="endAgain" style="justify-self:end">Jeszcze raz</button>
+  </article>
+</div>
+
+<button class="endday mobile-end" id="endBtnM">Zakończ dzień 1</button>
+
+<div class="night" id="night" aria-hidden="true"><p id="nightText"></p></div>
+
+<script>
+// ===== SIM-START =====
+const DAYS = 30;
+const STOVE = [
+  { name: 'Oszczędnie', heat: 10, wood: 6 },
+  { name: 'Normalnie', heat: 18, wood: 10 },
+  { name: 'Mocno', heat: 28, wood: 15 },
+];
+const RATIONS = [
+  { name: 'Pełne', eat: 1, hope: 0, trust: 0, note: '1 porcja' },
+  { name: 'Połowa', eat: 0.5, hope: -1.5, trust: 0, note: '½ porcji' },
+  { name: 'Głodowe', eat: 0.25, hope: -4, trust: -2, note: '¼ porcji' },
+];
+const JOBS = {
+  rest: { name: 'Odpoczynek' },
+  wood: { name: 'Drewno', out: true },
+  hunt: { name: 'Wnyki', out: true },
+  cook: { name: 'Kuchnia' },
+  care: { name: 'Opieka nad chorymi' },
+  fix: { name: 'Naprawy' },
+  radio: { name: 'Radio' },
+};
+const RULES = [
+  { id: 'lock', name: 'Spiżarnia pod kluczem', text: 'Nikt nie podkradnie jedzenia w nocy.', cost: 'Zaufanie −8', apply: st => { st.trust -= 8; } },
+  { id: 'first', name: 'Najpierw dzieci i chorzy', text: 'Dzieci i chorzy zawsze dostają pełną porcję, bez względu na racje.', cost: 'Nadzieja +5, zaufanie +3, jedzenie schodzi szybciej', apply: st => { st.hope += 5; st.trust += 3; } },
+  { id: 'work', name: 'Kto nie pracuje, ten nie je', text: 'Zdrowi, którzy odpoczywają, dostają najwyżej pół porcji. Praca idzie o 15% szybciej.', cost: 'Zaufanie −10, nadzieja −5', apply: st => { st.trust -= 10; st.hope -= 5; } },
+  { id: 'stories', name: 'Wieczory przy piecu', text: 'Co wieczór wszyscy siedzą razem w świetlicy. Nadzieja rośnie o 2 dziennie.', cost: 'Piec spala 2 polana więcej', apply: () => {} },
+  { id: 'pairs', name: 'Na mróz tylko w parach', text: 'Na zewnątrz traci się o 40% mniej zdrowia.', cost: 'Praca na mrozie idzie o 25% wolniej', apply: () => {} },
+];
+const ROOMS = [
+  { id: 'swietlica', name: 'Świetlica', ins: 2, cap: 4, dist: 0, size: 1.5, fixed: true },
+  { id: 'kuchnia', name: 'Kuchnia', ins: 1, cap: 1, dist: 1, size: 1 },
+  { id: 'jadalnia', name: 'Jadalnia', ins: 1, cap: 2, dist: 1, size: 1.2, strip: 15, convert: 'izba' },
+  { id: 'pokoj1', name: 'Pokój nad piecem', ins: 1, cap: 3, dist: 1, size: 1.1 },
+  { id: 'pokoj2', name: 'Pokój narożny', ins: 1, cap: 3, dist: 2, size: 1 },
+  { id: 'strych', name: 'Strych', ins: 0, cap: 0, dist: 2, size: 1.4, strip: 25, convert: 'sypialnia', open: false },
+  { id: 'weranda', name: 'Weranda', ins: 0, cap: 0, dist: 9, size: 1, strip: 35, outside: true, open: false },
+];
+const PROJECTS = {
+  ins: { name: 'ocieplanie', wood: 12 },
+  izba: { name: 'izba chorych', wood: 8 },
+  sypialnia: { name: 'sypialnia na strychu', wood: 15 },
+  okno: { name: 'naprawa okna', wood: 6 },
+};
+const PEOPLE = [
+  { id: 'marta', name: 'Marta', role: 'lekarka z Sanoka', g: 'f', health: 85, sk: { care: 2 }, frail: 1,
+    fate: ['Wróciła na oddział w Sanoku. Mówi, że nigdzie nie nauczyła się tyle, co tutaj.', 'Do końca chodziła od posłania do posłania.'] },
+  { id: 'bogdan', name: 'Bogdan', role: 'leśniczy', g: 'm', health: 90, sk: { wood: 1.5, hunt: 1.5 }, frail: 0.8,
+    fate: ['Wiosną naprawił drzwi szopy, zanim zszedł do wsi.', 'Las go znał. Zamieć nie.'] },
+  { id: 'kuba', name: 'Kuba', role: 'student elektroniki', g: 'm', health: 80, sk: { wood: 0.7, fix: 1.3 }, frail: 1,
+    fate: ['Obronił dyplom. Radio z kuchni zabrał na pamiątkę.', 'Miał dwadzieścia trzy lata.'] },
+  { id: 'halina', name: 'Halina', role: 'emerytowana nauczycielka', g: 'f', health: 70, sk: { cook: 1.5, wood: 0.5, hunt: 0.5 }, frail: 1.5,
+    fate: ['Opisała tę zimę w gazetce parafialnej. Nikt nie uwierzył w połowę.', 'Zasnęła w fotelu przy piecu i już się nie obudziła.'] },
+  { id: 'ola', name: 'Ola', role: 'mama Zosi', g: 'f', health: 80, sk: {}, frail: 1,
+    fate: ['Mówi, że Zosia o niczym innym nie opowiada.', 'Oddawała córce wszystko, co miała.'] },
+  { id: 'zosia', name: 'Zosia', role: '7 lat', g: 'f', health: 80, child: true, sk: {}, frail: 1.4,
+    fate: ['Narysowała schronisko kredkami. Rysunek wisi na lodówce.', 'Miała siedem lat.'] },
+  { id: 'wiktor', name: 'Wiktor', role: 'nie mówi, skąd idzie', g: 'm', health: 85, sk: { wood: 1.1, hunt: 1.3 }, frail: 0.9,
+    fate: ['Zostawił w schronisku pusty plecak i zniknął, zanim przyjechała policja.', 'Nikt nie wiedział, skąd naprawdę był.'] },
+];
+const SKIERS = [
+  { id: 'tomek', name: 'Tomek', role: 'narciarz z przełęczy', g: 'm', health: 75, sk: { wood: 1.1 }, frail: 1,
+    fate: ['Co roku w lutym przyjeżdża tu z termosem i pyta, czy czegoś nie trzeba.', 'Do końca pytał, w czym pomóc.'] },
+  { id: 'igor', name: 'Igor', role: 'narciarz z gitarą', g: 'm', health: 72, sk: { hunt: 1.1 }, frail: 1,
+    fate: ['Napisał piosenkę o tym schronisku. Nie gra jej na koncertach.', 'Gitara przetrwała. On nie.'] },
+  { id: 'basia', name: 'Basia', role: 'narciarka, odmrożone stopy', g: 'f', health: 34, sk: { cook: 1.1 }, frail: 1.1,
+    fate: ['Straciła dwa palce u stopy. Wróciła na narty po roku.', 'Stopy nie dały się uratować. Ona też nie.'] },
+];
+const CURVE = [[1, -8], [5, -11], [10, -14], [15, -17], [17, -20], [18, -25], [20, -28], [22, -25], [23, -19], [26, -12], [28, -7], [30, -2]];
+
+const clamp = (x, a = 0, b = 100) => x < a ? a : x > b ? b : x;
+const g = (p, m, f) => p && p.g === 'f' ? f : m;
+const P = (st, id) => st.people.find(p => p.id === id);
+const room = (st, id) => st.rooms.find(r => r.id === id);
+const present = (st, id) => { const p = P(st, id); return !!p && p.alive && p.here; };
+const alive = st => st.people.filter(p => p.alive && p.here);
+const hasRule = (st, id) => st.rules.includes(id);
+const canWork = (st, p) => p.alive && p.here && !p.sick && !p.child && p.refuse !== st.day;
+const adults = st => alive(st).filter(p => !p.child);
+function plural(n, one, few, many) {
+  n = Math.abs(Math.round(n));
+  if (n === 1) return one;
+  const d = n % 10, dd = n % 100;
+  return d >= 2 && d <= 4 && !(dd >= 12 && dd <= 14) ? few : many;
+}
+const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(Math.round(n));
+
+function rng(st) {
+  let a = (st.rs = (st.rs + 0x6D2B79F5) | 0);
+  a = Math.imul(a ^ a >>> 15, 1 | a);
+  a = a + Math.imul(a ^ a >>> 7, 61 | a) ^ a;
+  return ((a ^ a >>> 14) >>> 0) / 4294967296;
+}
+
+function baseTemp(day) {
+  for (let k = 0; k < CURVE.length - 1; k++) {
+    const [d0, t0] = CURVE[k], [d1, t1] = CURVE[k + 1];
+    if (day <= d1) return t0 + (t1 - t0) * (day - d0) / (d1 - d0);
+  }
+  return CURVE[CURVE.length - 1][1];
+}
+
+function person(p) {
+  return { ...p, sk: { ...p.sk }, fate: p.fate.slice(), alive: true, here: true, sick: false, job: 'rest', refuse: 0, ownFood: 0, end: null, diedDay: 0, child: !!p.child };
+}
+
+function newGame(seed) {
+  const st = {
+    seed, rs: seed | 0, day: 1, wood: 70, food: 45, hope: 60, trust: 60, stove: 1, ration: 0,
+    people: PEOPLE.map(person), rooms: ROOMS.map(r => ({ ...r, open: r.open !== false, gone: false, project: null, broken: false, func: null })),
+    rules: [], ruleDay: 3, flags: {}, log: [], decisions: [], seen: [], trips: [], event: null, report: [],
+    radio: 0, radioOn: false, rescueDay: DAYS, over: null, deaths: 0, weather: [],
+  };
+  for (let d = 1; d <= DAYS; d++) {
+    const storm = d >= 18 && d <= 22, windy = (d >= 15 && d <= 17) || (d >= 23 && d <= 24);
+    const wind = storm ? 2 : windy ? 1 : rng(st) < 0.25 ? 1 : 0;
+    st.weather.push({ t: Math.round(baseTemp(d) + (rng(st) - 0.5) * 4), wind });
+  }
+  for (const p of st.people) if (!p.child) p.job = { bogdan: 'wood', wiktor: 'wood', halina: 'cook', marta: 'rest', kuba: 'wood', ola: 'hunt' }[p.id] || 'rest';
+  pickEvent(st);
+  return st;
+}
+
+function say(st, text, kind = '') { st.log.push({ day: st.day, text, kind }); }
+function kill(st, p, how) {
+  p.alive = false; p.end = 'dead'; p.diedDay = st.day; st.deaths++;
+  if (!st.flags.burialDone && !st.flags.burial) st.flags.burial = p.id;
+  if (how) say(st, how, 'death');
+}
+
+function woodNeed(st) { return STOVE[st.stove].wood + (hasRule(st, 'stories') ? 2 : 0); }
+
+function nightTemps(st, heatFrac = 1) {
+  const w = st.weather[Math.min(DAYS, st.day) - 1];
+  const H = STOVE[st.stove].heat * heatFrac;
+  const rooms = st.rooms.filter(r => !r.gone && !r.outside);
+  const open = rooms.filter(r => r.open);
+  const W = open.reduce((a, r) => a + 1 / (1 + r.dist), 0) || 1;
+  const porch = !room(st, 'weranda').gone;
+  const cooks = alive(st).some(p => p.job === 'cook' && canWork(st, p));
+  const T = {};
+  for (const r of rooms) {
+    const ins = Math.max(0, r.ins + (r.id === 'swietlica' && porch ? 1 : 0) - (r.broken ? 1 : 0));
+    const windLoss = w.wind * Math.max(0, 3 - ins) * 0.8;
+    if (!r.open) { T[r.id] = w.t + 3 - windLoss; continue; }
+    let t = w.t + 4 + (H / (1 + r.dist) / W) * (1 + 0.5 * ins) * 3.6 / r.size - windLoss;
+    if (r.id === 'kuchnia' && cooks) t += 3;
+    T[r.id] = t;
+  }
+  return T;
+}
+
+// Ludzie śpią tam, gdzie najcieplej; chorzy najpierw w izbie chorych; jak brakuje miejsc, robi się tłok
+function beds(st, T) {
+  const rooms = st.rooms.filter(r => !r.gone && !r.outside && r.open && r.cap > 0).sort((a, b) => T[b.id] - T[a.id]);
+  const occ = Object.fromEntries(rooms.map(r => [r.id, []]));
+  const order = alive(st).slice().sort((a, b) => (b.sick - a.sick) || (b.child - a.child) || (b.frail - a.frail));
+  const izba = rooms.find(r => r.func === 'izba');
+  for (const p of order) {
+    let r = null;
+    if (p.sick && izba && occ[izba.id].length < izba.cap) r = izba;
+    if (!r) r = rooms.find(q => occ[q.id].length < q.cap && !(q.func === 'izba' && !p.sick));
+    if (!r) r = rooms[0];
+    occ[r.id].push(p.id);
+  }
+  const temp = { ...T };
+  for (const r of rooms) temp[r.id] = Math.min(24, T[r.id] + occ[r.id].length * 1.2);   // ciepło ludzi
+  return { occ, temp };
+}
+
+function foodPlan(st) {
+  const r = RATIONS[st.ration], eat = {};
+  const cooks = alive(st).filter(p => p.job === 'cook' && canWork(st, p)).slice(0, 2);
+  const save = Math.min(0.3, cooks.reduce((a, p) => a + 0.12 * (p.sk.cook || 1), 0));
+  let need = 0;
+  for (const p of alive(st)) {
+    let e = r.eat;
+    if (st.flags.fullUntil >= st.day) e = 1;
+    if (hasRule(st, 'first') && (p.child || p.sick)) e = 1;
+    if (hasRule(st, 'work') && canWork(st, p) && p.job === 'rest') e = Math.min(e, 0.5);
+    if (p.ownFood >= st.day) { eat[p.id] = 1; continue; }
+    eat[p.id] = e;
+    need += e * (p.child ? 0.6 : 1);
+  }
+  return { need: need * (1 - save), eat };
+}
+
+function finishProject(st, r, rep) {
+  const k = r.project;
+  r.project = null;
+  if (k === 'ins') { r.ins = Math.min(3, r.ins + 1); rep.push(`${r.name}: ściany ocieplone.`); }
+  if (k === 'izba') { r.func = 'izba'; r.cap = 3; r.name = 'Izba chorych'; rep.push('Jadalnia jest teraz izbą chorych.'); }
+  if (k === 'sypialnia') { r.cap = 3; r.ins = Math.max(r.ins, 1); r.open = true; r.name = 'Sypialnia na strychu'; rep.push('Na strychu stoją trzy prycze.'); }
+  if (k === 'okno') { r.broken = false; rep.push(`${r.name}: okno zabite deskami.`); }
+}
+
+// Jedna doba: dzień pracy, wieczorny posiłek, noc przy piecu
+function endDay(st, preview) {
+  const R = preview ? () => 0.5 : () => rng(st);
+  const rep = [];
+  const w = st.weather[st.day - 1];
+  const here = alive(st);
+  const working = job => here.filter(p => p.job === job && canWork(st, p));
+  const pairs = hasRule(st, 'pairs'), workRule = hasRule(st, 'work');
+  const pace = workRule ? 1.15 : 1;
+  const outPace = (w.wind === 2 ? 0.45 : w.wind === 1 ? 0.8 : 1) * (pairs ? 0.75 : 1) * pace;
+  const chopped = Math.round(working('wood').reduce((a, p) => a + 7 * (p.sk.wood || 1), 0) * outPace);
+  const hunters = working('hunt');
+  const caught = Math.round(hunters.reduce((a, p) => a + R() * 5 * (p.sk.hunt || 1), 0) * (w.wind === 2 ? 0.3 : 1) * (pairs ? 0.75 : 1) * pace);
+  st.wood += chopped; st.food += caught;
+  if (chopped) rep.push(`Narąbano ${chopped} ${plural(chopped, 'polano', 'polana', 'polan')}.`);
+  if (hunters.length) rep.push(caught ? `W sidła wpadło mięso na ${caught} ${plural(caught, 'porcję', 'porcje', 'porcji')}.` : 'Sidła były puste.');
+  let fixes = Math.floor(working('fix').reduce((a, p) => a + (p.sk.fix || 1), 0) + 1e-6);
+  for (const r of st.rooms) if (fixes > 0 && r.project && !r.gone) { finishProject(st, r, rep); fixes--; }
+  if (st.flags.radioJob && !st.radioOn && working('radio').length) {
+    st.radio++;
+    if (st.radio >= 3) { st.radioOn = true; rep.push('Kuba skończył radio.'); }
+    else rep.push(`Kuba lutuje przy kuchennym stole (${st.radio} z 3 dni).`);
+  }
+  // wieczór
+  const plan = foodPlan(st);
+  let frac = 1;
+  if (plan.need > st.food + 1e-6) {
+    frac = plan.need > 0 ? st.food / plan.need : 1;
+    st.food = 0;
+    rep.push('Spiżarnia jest pusta. Ludzie poszli spać głodni.');
+  } else st.food = Math.round((st.food - plan.need) * 10) / 10;
+  // noc
+  const need = woodNeed(st), burn = Math.min(st.wood, need);
+  st.wood -= burn;
+  const heatFrac = need ? burn / need : 1;
+  if (heatFrac < 1) rep.push('Zabrakło drewna. Piec wystygł przed świtem.');
+  const T = nightTemps(st, heatFrac), { occ, temp } = beds(st, T);
+  const roomOf = {};
+  for (const [rid, ids] of Object.entries(occ)) for (const id of ids) roomOf[id] = rid;
+  const capOf = rid => room(st, rid).cap;
+  const izba = st.rooms.find(r => r.func === 'izba' && r.open && !r.gone);
+  const exposure = Math.max(0, -w.t - 4) * 0.35 * (1 + w.wind * 0.5) * (pairs ? 0.6 : 1);
+  for (const p of here) {
+    const rid = roomOf[p.id], Ts = temp[rid], crowded = occ[rid].length > capOf(rid);
+    const eat = Math.min(1, (plan.eat[p.id] ?? 1) * (p.ownFood >= st.day ? 1 : frac));
+    let d = Math.max(0, 12 - Ts) * 0.9 * p.frail;
+    if (crowded) d += 1.5;
+    d += (1 - eat) * 3 + (eat < 0.3 ? 4 : 0) + (eat < 0.05 ? 4 : 0);
+    if (JOBS[p.job].out && canWork(st, p)) d += exposure * p.frail;
+    let heal = 0;
+    if (!canWork(st, p) || p.job === 'rest') heal += 3;
+    if (Ts >= 14 && eat >= 0.5) heal += eat >= 0.99 ? 3 : 1.5;
+    if (p.sick) { d += 3; if (izba && rid === izba.id) heal += 4; }
+    p.health = clamp(p.health - d + heal);
+  }
+  const sick = here.filter(p => p.sick).sort((a, b) => a.health - b.health);
+  let k = 0;
+  for (const c of working('care')) for (let n = 0; n < 3 && k < sick.length; n++, k++) sick[k].health = clamp(sick[k].health + 7 * (c.sk.care || 1));
+  for (const [rid, ids] of Object.entries(occ)) {
+    if (ids.length <= capOf(rid)) continue;
+    const ppl = ids.map(id => P(st, id));
+    if (!ppl.some(p => p.sick)) continue;
+    for (const p of ppl) if (!p.sick && R() < 0.15) {
+      p.health = clamp(p.health - 12);
+      rep.push(`${p.name} ${g(p, 'zaraził', 'zaraziła')} się w ścisku.`);
+    }
+  }
+  let died = 0;
+  for (const p of here) {
+    if (p.health <= 0) { if (!preview) kill(st, p); else p.alive = false; died++; rep.push(`${p.name} nie ${g(p, 'przeżył', 'przeżyła')} nocy.`); continue; }
+    if (!p.sick && p.health < 40) { p.sick = true; rep.push(`${p.name} ma gorączkę.`); }
+    else if (p.sick && p.health > 60) { p.sick = false; rep.push(`${p.name} ${g(p, 'wyzdrowiał', 'wyzdrowiała')}.`); }
+  }
+  // nastroje
+  let dh = RATIONS[st.flags.fullUntil >= st.day ? 0 : st.ration].hope, dt = RATIONS[st.ration].trust;
+  if (frac < 1) { dh -= 4; dt -= 3; }
+  if (temp.swietlica >= 16) dh += 1; else if (temp.swietlica < 8) dh -= 2;
+  if (Object.entries(occ).some(([rid, ids]) => ids.length > capOf(rid))) dh -= 1;
+  dh -= here.filter(p => p.alive && p.sick).length * 0.5;
+  if (hasRule(st, 'stories')) dh += 2;
+  if (w.wind === 2 && !st.radioOn) dh -= 1;
+  dh += Math.min(2, working('cook').length) * 0.5;
+  if (workRule) dt -= 0.5;
+  dh -= died * 12; dt -= died * 4;
+  st.hope = clamp(st.hope + dh); st.trust = clamp(st.trust + dt);
+  if (preview) return { temp, occ };
+  // rano
+  st.day++;
+  for (const t of st.trips.slice()) if (t.back <= st.day) { st.trips.splice(st.trips.indexOf(t), 1); returnTrip(st, t, rep); }
+  for (const p of st.people) if (p.sick && p.job !== 'rest') p.job = 'rest';
+  st.report = rep;
+  for (const line of rep) say(st, line, /nie przeżył|nie wrócił/.test(line) ? 'death' : '');
+  checkEnd(st);
+  if (!st.over) pickEvent(st);
+  return rep;
+}
+
+function startTrip(st, kind, ids, days) {
+  for (const id of ids) { const p = P(st, id); p.here = false; p.job = 'rest'; }
+  st.trips.push({ kind, ids, back: st.day + days });
+}
+
+function returnTrip(st, t, rep) {
+  const ppl = t.ids.map(id => P(st, id));
+  if (t.kind === 'lesniczowka') {
+    if (rng(st) < 0.7) {
+      for (const p of ppl) { p.here = true; p.health = clamp(p.health - 15); }
+      st.food += 30; st.wood += 15; st.hope += 8;
+      rep.push('Bogdan i Wiktor wrócili z leśniczówki z dwoma workami. Jedzenie na 30 porcji i trochę suchego drewna.');
+    } else {
+      const lost = ppl.find(p => p.id === 'wiktor') || ppl[0];
+      for (const p of ppl) { if (p !== lost) { p.here = true; p.health = clamp(p.health - 30); } }
+      lost.here = true; kill(st, lost);
+      st.hope -= 12;
+      rep.push(`Wrócił tylko ${ppl.filter(p => p !== lost).map(p => p.name).join(' i ') || 'nikt'}. ${lost.name} wpadł do potoku pod śniegiem.`);
+    }
+  }
+  if (t.kind === 'pomoc') {
+    const p = ppl[0];
+    if (rng(st) < 0.55) {
+      p.end = 'help'; st.rescueDay = Math.min(st.rescueDay, st.day + 2); st.hope += 15;
+      rep.push(`Przez śnieżycę przebił się sygnał raców. Bogdan dotarł do Wetliny! Ratownicy będą tu ${st.rescueDay} dnia.`);
+    } else {
+      p.here = true; kill(st, p); st.hope -= 10;
+      rep.push('Bogdan nie wrócił. Nikt nie przyszedł z dołu.');
+    }
+  }
+}
+
+function checkEnd(st) {
+  const left = st.people.filter(p => p.alive && (p.here || st.trips.some(t => t.ids.includes(p.id))));
+  if (!left.length) st.over = 'empty';
+  else if (st.trust <= 0) st.over = 'keys';
+  else if (st.day >= st.rescueDay) st.over = 'rescue';
+}
+
+function pickEvent(st) {
+  st.event = null;
+  const due = EVENTS.filter(e => {
+    if (e.repeat) { if ((st.flags['last_' + e.id] ?? -99) > st.day - e.repeat) return false; }
+    else if (st.seen.includes(e.id)) return false;
+    if (e.day != null && (st.day < e.day || st.day > (e.until ?? e.day + 2))) return false;
+    return !e.when || e.when(st);
+  });
+  due.sort((a, b) => (b.prio || 1) - (a.prio || 1) || (a.day ?? 0) - (b.day ?? 0));
+  const e = due[0];
+  if (!e) return;
+  st.event = e.id;
+  if (e.setup) e.setup(st);
+}
+
+function choose(st, idx) {
+  const e = EVENTS.find(x => x.id === st.event);
+  const c = e.choices[idx];
+  const text = c.act(st) || '';
+  st.hope = clamp(st.hope); st.trust = clamp(st.trust); st.wood = Math.max(0, st.wood); st.food = Math.max(0, st.food);
+  if (e.repeat) st.flags['last_' + e.id] = st.day; else st.seen.push(e.id);
+  const rec = typeof c.record === 'function' ? c.record(st) : c.record;
+  if (rec) st.decisions.push(`Dzień ${st.day}. ${rec}`);
+  say(st, `${e.title}: ${typeof c.label === 'function' ? c.label(st) : c.label}.`, 'choice');
+  st.event = null;
+  checkEnd(st);
+  return text;
+}
+
+function adoptRule(st, id) {
+  if (st.day < st.ruleDay || hasRule(st, id)) return false;
+  const r = RULES.find(x => x.id === id);
+  st.rules.push(id); r.apply(st);
+  st.hope = clamp(st.hope); st.trust = clamp(st.trust);
+  st.ruleDay = st.day + 3;
+  st.decisions.push(`Dzień ${st.day}. Zasada: ${r.name}`);
+  say(st, `Nowa zasada: ${r.name}.`, 'choice');
+  checkEnd(st);
+  return true;
+}
+
+function roomAction(st, id, act, kind) {
+  const r = room(st, id);
+  if (act === 'toggle' && !r.fixed && !r.gone && r.cap > 0) r.open = !r.open;
+  if (act === 'queue' && !r.project) { const c = PROJECTS[kind].wood; if (st.wood >= c) { st.wood -= c; r.project = kind; } }
+  if (act === 'cancel' && r.project) { st.wood += PROJECTS[r.project].wood; r.project = null; }
+  if (act === 'strip' && r.strip && !r.gone) {
+    if (r.project) st.wood += PROJECTS[r.project].wood;
+    st.wood += r.strip; r.gone = true; r.open = false; r.project = null; r.cap = 0;
+    st.decisions.push(`Dzień ${st.day}. Rozebrano na opał: ${r.name.toLowerCase()}`);
+    say(st, `${r.name} poszła na opał: ${sgn(r.strip)} drewna.`, 'choice');
+  }
+}
+
+function weakest(st, n = 1, filter = p => !p.child) {
+  return alive(st).filter(filter).sort((a, b) => a.health - b.health).slice(0, n);
+}
+function strongest(st, n) {
+  return alive(st).filter(p => canWork(st, p)).sort((a, b) => b.health - a.health).slice(0, n);
+}
+function addPeople(st, list) {
+  for (const p of list) { const q = person(p); st.people.push(q); }
+}
+function lose(st, list) {
+  for (const p of list) { const q = person(p); q.alive = false; q.here = false; q.end = 'lost'; st.people.push(q); }
+}
+
+const EVENTS = [
+  { id: 'komunikat', day: 1, title: 'Ostatni komunikat',
+    text: st => [`Radio w kuchni trzeszczy: „…front znad Ukrainy, opady do półtora metra. Temperatura spadnie poniżej minus dwudziestu pięciu, najgorsze około dwudziestego. Drogi w Bieszczadach nieprzejezdne…”. Potem już tylko szum.`,
+      `W schronisku jest siedem osób, ${st.wood} polan w szopie i ${st.food} porcji w spiżarni. Wszyscy patrzą na ciebie.`],
+    choices: [
+      { label: 'Powiedzieć im prawdę', hint: '+8 zaufania · −5 nadziei', record: 'Pierwszy wieczór: cała prawda o burzy.',
+        act: st => { st.trust += 8; st.hope -= 5; return 'Długo nikt się nie odzywa. Potem Bogdan wstaje i idzie policzyć polana w szopie.'; } },
+      { label: 'Uspokoić ich: za tydzień będzie po wszystkim', hint: '+6 nadziei · kłamstwo może wyjść na jaw', record: 'Pierwszy wieczór: „za tydzień będzie po wszystkim”.',
+        act: st => { st.hope += 6; st.flags.lied = true; return 'Ktoś się uśmiecha. Halina mówi, że w siedemdziesiątym dziewiątym też tak sypało i jakoś się przeżyło.'; } },
+    ] },
+  { id: 'plecak', day: 2, when: st => present(st, 'wiktor'), title: 'Plecak Wiktora',
+    text: () => ['Wiktor przyszedł dzień przed burzą od strony granicy i nie mówi, skąd idzie. Ola widziała, co ma w plecaku: konserwy, kiełbasę, suchary. Jedzenie na jakieś trzydzieści porcji.', 'Wiktor siedzi na plecaku i patrzy w ogień.'],
+    choices: [
+      { label: 'Zabrać plecak do wspólnej spiżarni', hint: '+30 jedzenia · −8 zaufania', record: 'Plecak Wiktora: zabrany do spiżarni.',
+        act: st => { st.food += 30; st.trust -= 8; st.flags.wiktor = 'angry'; return 'Wiktor nie protestuje. Tylko od tej pory siada sam, najdalej od pieca.'; } },
+      { label: 'Poprosić, żeby się podzielił', hint: '+15 jedzenia', record: 'Plecak Wiktora: podzielił się połową.',
+        act: st => { st.food += 15; st.flags.wiktor = 'ok'; return 'Wiktor długo milczy. W końcu wykłada na stół połowę konserw. „Reszta na drogę” – mówi.'; } },
+      { label: 'To jego jedzenie', hint: '−6 nadziei · +5 zaufania · Wiktor przez 10 dni je swoje', record: 'Plecak Wiktora: został przy nim.',
+        act: st => { st.hope -= 6; st.trust += 5; st.flags.wiktor = 'friend'; P(st, 'wiktor').ownFood = st.day + 10; return 'Wieczorem Wiktor je kiełbasę przy piecu. Zosia patrzy na niego tak długo, aż Ola zabiera ją na górę.'; } },
+    ] },
+  { id: 'zasady', day: 3, title: 'Jak tu żyć',
+    text: () => ['Przy kolacji Halina odkłada łyżkę. „Ustalmy zasady. Kto pracuje, kto ile je, kto o czym decyduje. Bo jak nie, to się pozagryzamy przed końcem miesiąca.”'],
+    choices: [
+      { label: 'Ustalę zasady', hint: 'Co trzy dni możesz wprowadzić jedną zasadę', act: st => { st.flags.openRules = true; return 'Wyjmujesz zeszyt schroniska i zaczynasz pisać na ostatniej stronie.'; } },
+      { label: 'Jesteśmy dorośli, dogadamy się', hint: '+3 zaufania · zasady możesz wprowadzić później', act: st => { st.trust += 3; return 'Halina wzrusza ramionami. Wiktor parska śmiechem.'; } },
+    ] },
+  { id: 'narciarze', day: 4, title: 'Pukanie w nocy',
+    text: st => ['Po północy ktoś wali w drzwi. Trzech narciarzy z przełęczy: Tomek, Igor i Basia. Basia nie czuje palców u stóp, Igor ma na plecach gitarę. „Nie mamy nic do jedzenia” – mówi Tomek.', `W spiżarni zostało ${Math.round(st.food)} porcji.`],
+    choices: [
+      { label: 'Wpuścić wszystkich', hint: '+3 osoby · +5 nadziei · +5 zaufania', record: 'Narciarze z przełęczy: wpuszczeni wszyscy.',
+        act: st => { addPeople(st, SKIERS); st.hope += 5; st.trust += 5; return 'Basia płacze, kiedy Marta rozciera jej stopy. Tomek od rana pyta, w czym pomóc.'; } },
+      { label: 'Wpuścić Basię, chłopakom wskazać szałas pasterski', hint: '+1 osoba · −10 nadziei · −8 zaufania', record: 'Narciarze z przełęczy: wpuszczona tylko Basia.',
+        act: st => { addPeople(st, [SKIERS[2]]); lose(st, SKIERS.slice(0, 2)); st.hope -= 10; st.trust -= 8; st.flags.door = 'half'; return 'Tomek długo patrzy ci w oczy. Potem bierze koc i mapę. Igor zostawia gitarę w sieni: „Niech chociaż ona nie zmarznie”.'; } },
+      { label: 'Nie otwierać', hint: '−15 nadziei · −15 zaufania', record: 'Narciarze z przełęczy: drzwi zostały zamknięte.',
+        act: st => { lose(st, SKIERS); st.hope -= 15; st.trust -= 15; st.flags.door = 'closed'; return 'Pukanie trwa jeszcze kwadrans. Potem cichnie. Nikt w świetlicy nie śpi do rana.'; } },
+    ] },
+  { id: 'radio', day: 6, when: st => present(st, 'kuba'), title: 'Kuba i telewizor',
+    text: () => ['Kuba rozkręcił stary telewizor ze świetlicy. Twierdzi, że z lamp i cewek złoży nadajnik i połączy się z GOPR-em. Potrzebuje trzech dni pracy przy kuchennym stole.'],
+    choices: [
+      { label: 'Niech próbuje', hint: 'Kuba może pracować przy radiu (zajęcie „Radio”)', record: 'Radio: Kuba dostał trzy dni.',
+        act: st => { st.flags.radioJob = true; return 'Kuba rozkłada śrubki na ściereczce. Pierwszy raz od początku burzy się uśmiecha.'; } },
+      { label: 'Szkoda czasu, potrzebuję go przy drewnie', hint: 'bez radia', record: 'Radio: zostało na stole w częściach.',
+        act: () => 'Kuba wzrusza ramionami i idzie po siekierę.' },
+    ] },
+  { id: 'slady', day: 6, when: st => st.flags.door === 'closed', title: 'Ślady na śniegu',
+    text: () => ['Rano przy szopie są ślady nart. Prowadzą w dół, w stronę lasu, i znikają pod świeżym śniegiem. Nikt o nich nie mówi.'],
+    choices: [{ label: 'Zamknąć okiennice', hint: '−5 nadziei', act: st => { st.hope -= 5; return 'Przez cały dzień w świetlicy jest bardzo cicho.'; } }] },
+  { id: 'goraczka', day: 7, when: st => weakest(st).length > 0, title: 'Gorączka',
+    setup: st => { st.flags.fever = (present(st, 'halina') && !P(st, 'halina').sick ? P(st, 'halina') : weakest(st)[0]).id; },
+    text: st => { const p = P(st, st.flags.fever); return [`${p.name} ma wysoką gorączkę i dreszcze.`, present(st, 'marta') ? `Marta mierzy ${g(p, 'mu', 'jej')} puls i kręci głową: „Potrzebuje ciepła i jedzenia. Inaczej nie wiem”.` : 'Nikt tu nie jest lekarzem. W apteczce zostały dwie tabletki.']; },
+    choices: [
+      { label: 'Dawać podwójną porcję przez kilka dni', hint: '−6 jedzenia · zdrowie +20', ok: st => st.food >= 6, record: st => { const p = P(st, st.flags.fever); return `Gorączka: ${p.name} ${g(p, 'dostał', 'dostała')} podwójne porcje.`; },
+        act: st => { st.food -= 6; const p = P(st, st.flags.fever); p.health = clamp(p.health + 20); return `${p.name} je powoli, łyżka po łyżce. Wieczorem gorączka trochę spada.`; } },
+      { label: 'Położyć przy samym piecu, reszta się ściśnie', hint: 'zdrowie +12 · −3 nadziei', record: 'Gorączka: chory przy piecu, reszta w ścisku.',
+        act: st => { const p = P(st, st.flags.fever); p.health = clamp(p.health + 12); st.hope -= 3; return 'Ktoś mruczy pod nosem, że teraz będzie spał na podłodze. Ale nikt się nie sprzeciwia.'; } },
+      { label: 'Nic więcej nie możemy zrobić', hint: '−4 nadziei', record: 'Gorączka: nic więcej nie zrobiono.',
+        act: st => { st.hope -= 4; const p = P(st, st.flags.fever); p.health = clamp(p.health - 5); return 'Marta siedzi przy chorym do rana. Rano mówi tylko: „Zobaczymy”.'; } },
+    ] },
+  { id: 'tydzien', day: 8, when: st => st.flags.lied, title: 'Minął tydzień',
+    text: () => ['Śnieg sypie dalej, radio milczy. Przy kolacji ktoś przypomina ci, że miało być po wszystkim. Wszystkie łyżki stukają ciszej.'],
+    choices: [
+      { label: 'Przeprosić i powiedzieć prawdę', hint: '−10 zaufania · +2 nadziei', record: 'Tydzień później: przyznanie się do kłamstwa.',
+        act: st => { st.trust -= 10; st.hope += 2; return 'Halina kiwa głową. „Lepiej późno niż wcale.” Wiktor się śmieje, ale krótko.'; } },
+      { label: 'Zrzucić to na radio', hint: '−4 zaufania · −6 nadziei', record: 'Tydzień później: „to radio się pomyliło”.',
+        act: st => { st.trust -= 4; st.hope -= 6; return 'Nikt ci nie wierzy, ale nikt tego nie mówi głośno.'; } },
+    ] },
+  { id: 'kradziez', day: 9, when: st => !hasRule(st, 'lock') && st.food > 8, title: 'Puste miejsce na półce',
+    setup: st => { st.food -= 8; st.flags.thief = (st.flags.wiktor === 'angry' && present(st, 'wiktor')) ? 'wiktor' : present(st, 'kuba') ? 'kuba' : (strongest(st, 1)[0] || alive(st)[0]).id; },
+    text: () => ['Rano w spiżarni brakuje ośmiu porcji. Ktoś w nocy nie mógł zasnąć z głodu.'],
+    choices: [
+      { label: 'Przeszukać plecaki', hint: '−4 zaufania · winny się znajdzie', record: st => `Kradzież: przeszukane plecaki, winny – ${P(st, st.flags.thief).name}.`,
+        act: st => { st.trust -= 4; st.hope -= 3; const p = P(st, st.flags.thief); return `Puste puszki są w plecaku, w którym nikt by ich nie szukał. ${p.name} nie podnosi wzroku przez cały dzień.`; } },
+      { label: 'Zamknąć spiżarnię na klucz', hint: 'zasada „Spiżarnia pod kluczem” · −8 zaufania', record: 'Kradzież: spiżarnia od dziś pod kluczem.',
+        act: st => { st.rules.push('lock'); st.trust -= 8; return 'Klucz wisi teraz na twojej szyi. Ludzie patrzą na niego przy każdym posiłku.'; } },
+      { label: 'Odpuścić', hint: '−5 nadziei', record: 'Kradzież: puszczona płazem.',
+        act: st => { st.hope -= 5; return 'Od tej pory każdy je swoją porcję szybko, pochylony nad miską.'; } },
+    ] },
+  { id: 'szalas', day: 9, when: st => st.flags.door === 'half', title: 'Szałas',
+    text: () => ['Bogdan wrócił z drewnem i z wiadomością. Szałas pasterski stoi pusty, drzwi wyrwał wiatr. Tomka i Igora tam nie ma.'],
+    choices: [{ label: 'Zapalić świeczkę w oknie', hint: '−8 nadziei', act: st => { st.hope -= 8; return present(st, 'basia') ? 'Basia przez cały wieczór nie odchodzi od okna.' : 'Świeczka pali się do rana.'; } }] },
+  { id: 'weranda', day: 10, when: st => !room(st, 'weranda').gone, title: 'Weranda trzeszczy',
+    text: () => ['Na dachu werandy leży metr mokrego śniegu. Belki trzeszczą coraz głośniej. Weranda osłania świetlicę od wiatru.'],
+    choices: [
+      { label: 'Rozebrać ją na opał', hint: '+35 drewna · świetlica traci osłonę od wiatru',
+        act: st => { roomAction(st, 'weranda', 'strip'); return 'Belki są suche jak pieprz. W świetlicy od razu robi się chłodniej przy ścianie.'; } },
+      { label: 'Odśnieżyć dach', hint: 'dwie najsilniejsze osoby tracą po 10 zdrowia', record: 'Weranda: odśnieżona.',
+        act: st => { const w = strongest(st, 2); for (const p of w) p.health = clamp(p.health - 10); return `${w.map(p => p.name).join(' i ')} zrzucają śnieg do zmroku. Wracają z sinymi dłońmi.`; } },
+      { label: 'Zostawić, może wytrzyma', hint: 'połowa szans, że się zawali', record: 'Weranda: zostawiona swojemu losowi.',
+        act: st => { if (rng(st) < 0.5) { const r = room(st, 'weranda'); r.gone = true; st.hope -= 3; return 'W nocy słychać trzask. Rano weranda leży w zaspie, połamana i mokra. Na opał się nie nada.'; } return 'Weranda wytrzymała. Na razie.'; } },
+    ] },
+  { id: 'sciezka', day: 12, when: st => present(st, 'wiktor') && present(st, 'bogdan') && st.flags.wiktor !== 'angry', title: 'Ścieżka przemytników',
+    text: () => ['Wiktor mówi cicho, żeby nikt nie słyszał: „Po słowackiej stronie jest leśniczówka. Sześć kilometrów. Zostawialiśmy tam z chłopakami zapasy.”', 'Bogdan zna las, Wiktor zna drogę. Nie będzie ich trzy dni.'],
+    choices: [
+      { label: 'Puścić ich', hint: 'Wiktor i Bogdan znikają na 3 dni · biorą 6 porcji · ryzykowne', record: 'Leśniczówka: Bogdan i Wiktor wyruszyli.',
+        act: st => { st.food -= 6; startTrip(st, 'lesniczowka', ['wiktor', 'bogdan'], 3); return 'Wychodzą przed świtem. Po kwadransie zamieć zasypuje ich ślady.'; } },
+      { label: 'Za duże ryzyko', hint: 'nic się nie zmienia', record: 'Leśniczówka: nikt nie poszedł.', act: () => 'Wiktor wzrusza ramionami. „Twoja decyzja, gospodarzu.”' },
+    ] },
+  { id: 'ucieczka', day: 12, when: st => present(st, 'wiktor') && st.flags.wiktor === 'angry', title: 'Pusty kąt',
+    setup: st => { const p = P(st, 'wiktor'); p.here = false; p.alive = false; p.end = 'left'; if (!hasRule(st, 'lock')) st.food = Math.max(0, st.food - 12); },
+    text: st => ['Rano kąt, w którym spał Wiktor, jest pusty. Nie ma jego butów ani kurtki.', hasRule(st, 'lock') ? 'Kłódka na spiżarni wisi nietknięta.' : 'Razem z nim zniknęło dwanaście porcji ze spiżarni.'],
+    choices: [{ label: 'Trudno', hint: '', act: () => 'Ktoś mówi, że jak zabierasz człowiekowi jedzenie, to nie dziw się, że odchodzi. Nikt nie odpowiada.' }] },
+  { id: 'autokar', day: 13, when: st => strongest(st, 2).length >= 2, title: 'Autokar na drodze',
+    text: st => [`Z okna strychu ${present(st, 'bogdan') ? 'Bogdan wypatrzył' : 'widać'} na drodze zasypany autokar. Może zostało w nim jedzenie. Dwa kilometry w śniegu po pas, przy ${Math.abs(st.weather[st.day - 1].t)} stopniach mrozu.`],
+    choices: [
+      { label: 'Wysłać dwie najsilniejsze osoby', hint: '+20 jedzenia · dwie osoby tracą po 15 zdrowia', record: 'Autokar: wyprawa po jedzenie.',
+        act: st => { const w = strongest(st, 2); for (const p of w) p.health = clamp(p.health - 15); st.food += 20; let extra = ''; if (rng(st) < 0.3) { w[0].health = clamp(w[0].health - 15); extra = ` ${w[0].name} ma odmrożone palce.`; } return `${w.map(p => p.name).join(' i ')} wracają po zmroku z torbami: paczki herbatników, słoiki, dwie zgrzewki konserw.${extra}`; } },
+      { label: 'Nie ryzykować', hint: 'nic się nie zmienia', record: 'Autokar: został na drodze.', act: () => 'Autokar powoli znika pod śniegiem.' },
+    ] },
+  { id: 'gitara', day: 15, when: st => present(st, 'igor'), title: 'Gitara',
+    text: st => [`Igor nastroił gitarę, którą niósł przez całą przełęcz. Gra cicho, ale po chwili wszyscy schodzą do świetlicy.${present(st, 'wiktor') ? ' Nawet Wiktor.' : ''}`],
+    choices: [
+      { label: 'Niech gra co wieczór', hint: '+10 nadziei', record: 'Gitara: grała co wieczór.', act: st => { st.hope += 10; return 'Zosia nauczyła się refrenu i śpiewa go nawet przy myciu misek.'; } },
+      { label: 'Spalić gitarę. Drewno to drewno.', hint: '+3 drewna · −12 nadziei · −6 zaufania', record: 'Gitara: poszła do pieca.', act: st => { st.wood += 3; st.hope -= 12; st.trust -= 6; return 'Struny pękają w ogniu z cichym jękiem. Igor wychodzi do sieni i długo nie wraca.'; } },
+      { label: 'Tylko w niedziele, szkoda strun', hint: '+4 nadziei', record: 'Gitara: tylko od święta.', act: st => { st.hope += 4; return 'W niedzielę cała świetlica śpiewa „Bieszczadzkie anioły”. Nawet ty.'; } },
+    ] },
+  { id: 'opowiesc', day: 15, when: st => !present(st, 'igor') && present(st, 'halina'), title: 'Opowieść Haliny',
+    text: () => ['Halina opowiada przy piecu o zimie siedemdziesiątego dziewiątego, kiedy uczyła w Cisnej i przez trzy tygodnie wozili dzieci do szkoły saniami.'],
+    choices: [
+      { label: 'Słuchać do późna', hint: '+6 nadziei · −3 drewna', record: 'Wieczór z opowieściami Haliny.', act: st => { st.hope += 6; st.wood -= 3; return 'Zosia zasypia z głową na kolanach Haliny.'; } },
+      { label: 'Spać, jutro trzeba wcześnie wstać', hint: 'nic się nie zmienia', act: () => 'Halina urywa w pół zdania i idzie na górę.' },
+    ] },
+  { id: 'przedburza', day: 17, title: 'Barometr',
+    text: st => [present(st, 'bogdan') ? 'Bogdan stuka palcem w barometr i kręci głową. „Od jutra nie wyjdziemy za próg. Kto ma rąbać, niech rąbie dziś.”' : 'Barometr w sieni spada tak nisko, że Kuba dwa razy go stuka, czy się nie zepsuł.', 'Nadchodzi to, o czym mówiło radio.'],
+    choices: [
+      { label: 'Wszyscy zdolni do pracy rąbią dziś drewno', hint: st => `+${strongest(st, 99).length * 6} drewna · każdy z nich traci 6 zdrowia`, record: 'Przed burzą: wszyscy przy drewnie.',
+        act: st => { const w = strongest(st, 99); for (const p of w) p.health = clamp(p.health - 6); st.wood += w.length * 6; return 'Do zmroku słychać tylko siekiery. Szopa jest pełna pod sam dach.'; } },
+      { label: 'Uszczelnić okna szmatami i papierem', hint: 'świetlica i pokój nad piecem +1 izolacji', record: 'Przed burzą: uszczelnione okna.',
+        act: st => { for (const id of ['swietlica', 'pokoj1']) { const r = room(st, id); if (!r.gone) r.ins = Math.min(3, r.ins + 1); } return 'Halina tnie stare prześcieradła na paski. Wieczorem przy oknach przestaje ciągnąć.'; } },
+      { label: 'Odpocząć przed najgorszym', hint: 'wszyscy +6 zdrowia', record: 'Przed burzą: dzień odpoczynku.',
+        act: st => { for (const p of alive(st)) p.health = clamp(p.health + 6); return 'Pierwszy dzień bez pracy. Ktoś gra w karty, ktoś po prostu śpi.'; } },
+    ] },
+  { id: 'szyba', day: 19, when: st => !room(st, 'pokoj2').gone, title: 'Pęknięta szyba',
+    text: () => ['W nocy wiatr wybił szybę w pokoju narożnym. Rano na parapecie leży zaspa.'],
+    choices: [
+      { label: 'Zabić okno deskami', hint: '−6 drewna', ok: st => st.wood >= 6, record: 'Szyba: zabita deskami.', act: st => { st.wood -= 6; return 'Deski trzymają. W pokoju jest ciemno jak w piwnicy, ale nie wieje.'; } },
+      { label: 'Zamknąć pokój, naprawi się później', hint: 'pokój narożny zamknięty i zimniejszy, dopóki ktoś go nie naprawi', record: 'Szyba: pokój narożny zamknięty.',
+        act: st => { const r = room(st, 'pokoj2'); r.broken = true; r.open = false; return 'Ludzie z narożnego przenoszą materace na dół.'; } },
+    ] },
+  { id: 'zosia', day: 20, when: st => present(st, 'zosia') && present(st, 'ola'), title: 'Porcja Oli',
+    text: () => ['Ola od trzech dni oddaje Zosi połowę swojej porcji. Dziś rano zemdlała przy piecu.'],
+    choices: [
+      { label: 'Dodatkowa porcja dla obu', hint: '−6 jedzenia · Ola +15 zdrowia', ok: st => st.food >= 6, record: 'Ola i Zosia: dodatkowe porcje.', act: st => { st.food -= 6; P(st, 'ola').health = clamp(P(st, 'ola').health + 15); return 'Ola je, a Zosia pilnuje, żeby zjadła wszystko.'; } },
+      { label: 'Zakazać jej tego', hint: 'Ola +8 · Zosia −8 · −3 nadziei', record: 'Ola i Zosia: każda je swoje.', act: st => { P(st, 'ola').health = clamp(P(st, 'ola').health + 8); P(st, 'zosia').health = clamp(P(st, 'zosia').health - 8); st.hope -= 3; return 'Ola patrzy na ciebie tak, jakbyś zabrał jej dziecko.'; } },
+      { label: 'To jej wybór', hint: 'Ola −10 · Zosia +8', record: 'Ola i Zosia: matka dalej oddaje porcje.', act: st => { P(st, 'ola').health = clamp(P(st, 'ola').health - 10); P(st, 'zosia').health = clamp(P(st, 'zosia').health + 8); return 'Ola kiwa głową. Wieczorem znowu przesuwa miskę w stronę córki.'; } },
+    ] },
+  { id: 'pomoc', day: 21, when: st => !st.radioOn && present(st, 'bogdan') && st.rescueDay > 26, title: 'Czternaście kilometrów',
+    text: st => ['Bogdan zakłada stuptuty. „Do Wetliny jest czternaście kilometrów. Znam tam każdy kamień. Za dwa dni będą tu ratownicy.”', `Na zewnątrz ${Math.abs(st.weather[st.day - 1].t)} stopni mrozu i zamieć.`],
+    choices: [
+      { label: 'Idź', hint: 'Bogdan wychodzi · ratunek może przyjść wcześniej · bardzo ryzykowne', record: 'Czternaście kilometrów: Bogdan poszedł po pomoc.',
+        act: st => { startTrip(st, 'pomoc', ['bogdan'], 2); return 'Ściskasz mu rękę. Jest twarda i ciepła. Po chwili widać już tylko biel.'; } },
+      { label: 'Nie puszczę cię', hint: '−5 nadziei', record: 'Czternaście kilometrów: Bogdan został.', act: st => { st.hope -= 5; return 'Bogdan siada ciężko na ławie. Przez cały dzień nie odzywa się do nikogo.'; } },
+    ] },
+  { id: 'gopr', prio: 6, when: st => st.radioOn, title: 'Radio działa',
+    text: () => ['Kuba podkręca gałkę i nagle przez szum przebija się głos: „Schronisko pod Połoniną, tu GOPR Bieszczady, słyszymy was!”', 'W świetlicy wybucha krzyk. Ratownicy dotrą skuterami, kiedy minie najgorsze: 27 dnia. Od dziś znasz też prognozę.'],
+    choices: [{ label: 'Przekazać wszystkim', hint: '+12 nadziei · ratunek 27 dnia', record: 'Radio: połączenie z GOPR.', act: st => { st.hope += 12; st.rescueDay = Math.min(st.rescueDay, 27); return 'Halina płacze. Wiktor klepie Kubę po plecach tak mocno, że ten prawie spada z krzesła.'; } }] },
+  { id: 'smiglowiec', day: 22, until: 25, when: st => st.radioOn && st.seen.includes('gopr') && alive(st).length >= 3, title: 'Śmigłowiec',
+    text: () => ['GOPR przez radio: „Jutro rano będzie okno pogodowe. Śmigłowiec zabierze dwie osoby. Tylko dwie, wiatr nie pozwoli na więcej.”'],
+    choices: [
+      { label: 'Dwoje najsłabszych', hint: st => weakest(st, 2, () => true).map(p => p.name).join(' i '), record: st => `Śmigłowiec: polecieli najsłabsi (${weakest(st, 2, () => true).map(p => p.name).join(', ')}).`,
+        act: st => { const w = weakest(st, 2, () => true); for (const p of w) { p.here = false; p.end = 'evac'; } return `${w.map(p => p.name).join(' i ')} odlatują przed świtem. Śmigłowiec znika w chmurach, zanim ktokolwiek zdążył pomachać.`; } },
+      { label: 'Ola z Zosią', hint: 'matka z dzieckiem', ok: st => present(st, 'ola') && present(st, 'zosia'), record: 'Śmigłowiec: polecieli Ola i Zosia.',
+        act: st => { for (const id of ['ola', 'zosia']) { const p = P(st, id); p.here = false; p.end = 'evac'; } st.hope += 4; return 'Zosia macha przez szybę do wszystkich po kolei. Ola nie odwraca głowy.'; } },
+      { label: 'Niech zdecyduje losowanie', hint: '+3 zaufania · zdecyduje przypadek', record: 'Śmigłowiec: zdecydowało losowanie.',
+        act: st => { const pool = alive(st).slice(); const w = []; for (let n = 0; n < 2 && pool.length; n++) w.push(pool.splice(Math.floor(rng(st) * pool.length), 1)[0]); for (const p of w) { p.here = false; p.end = 'evac'; } st.trust += 3; return `Zapałki ciągnie się z czapki Bogdana. Krótkie wyciągają ${w.map(p => p.name).join(' i ')}.`; } },
+    ] },
+  { id: 'pogrzeb', prio: 5, when: st => !!st.flags.burial, title: 'Pierwsza śmierć',
+    text: st => { const p = P(st, st.flags.burial); return [`${p.name} ${g(p, 'odszedł', 'odeszła')} ${p.diedDay}. dnia. Ziemia za schroniskiem jest zamarznięta na kamień.`, 'Wszyscy czekają, co postanowisz.']; },
+    choices: [
+      { label: 'Pochować w śniegu za szopą, z krzyżem z desek', hint: '−3 drewna · +4 nadziei', record: 'Pierwsza śmierć: grób w śniegu za szopą.', act: st => { st.wood -= 3; st.hope += 4; st.flags.burial = null; st.flags.burialDone = true; return 'Halina odmawia modlitwę. Wiatr zagłusza połowę słów.'; } },
+      { label: 'Złożyć w zimnej szopie do odwilży', hint: '−6 nadziei', record: 'Pierwsza śmierć: ciało w szopie do odwilży.', act: st => { st.hope -= 6; st.flags.burial = null; st.flags.burialDone = true; return 'Od tej pory po drewno chodzi się szybko i bez patrzenia w kąt.'; } },
+    ] },
+  { id: 'bunt', prio: 4, repeat: 6, when: st => st.trust < 25 && adults(st).length >= 3, title: 'Bunt w jadalni',
+    setup: st => { st.flags.rebels = strongest(st, 2).map(p => p.id); },
+    text: st => { const n = st.flags.rebels.map(id => P(st, id).name); return [`${n.join(' i ')} stoją przy drzwiach spiżarni. „Oddaj klucze. Prowadzisz nas wszystkich do grobu.”`, 'Reszta patrzy w podłogę.']; },
+    choices: [
+      { label: 'Oddać klucze', hint: '+15 zaufania · przez 3 dni wszyscy jedzą pełne porcje', record: 'Bunt: klucze do spiżarni oddane.', act: st => { st.trust += 15; st.flags.fullUntil = st.day + 2; return 'Przez trzy dni jedzą do syta. Potem wszyscy patrzą na pustoszejące półki.'; } },
+      { label: 'Obiecać pełne porcje od dziś', hint: '+8 zaufania · racje ustawione na pełne', record: 'Bunt: obietnica pełnych porcji.', act: st => { st.trust += 8; st.ration = 0; return 'Ludzie się rozchodzą. Obietnica zawisła w powietrzu jak para z garnka.'; } },
+      { label: 'Stanąć twardo', hint: '−8 zaufania · przy zerze stracisz schronisko', record: 'Bunt: twarda ręka.', act: st => { st.trust -= 8; return 'Patrzycie sobie w oczy dłuższą chwilę. W końcu odchodzą. Tym razem.'; } },
+    ] },
+  { id: 'rozpacz', prio: 3, repeat: 5, when: st => st.hope < 15 && adults(st).length >= 2, title: 'Uchylone drzwi',
+    setup: st => { const pool = adults(st); const p = pool[Math.floor(rng(st) * pool.length)]; st.flags.gone = p.id; p.here = false; },
+    text: st => { const p = P(st, st.flags.gone); return [`Rano drzwi są uchylone, a w sieni leży śnieg. ${p.name} ${g(p, 'wyszedł', 'wyszła')} w nocy w zamieć. Nikt nie słyszał.`]; },
+    choices: [
+      { label: 'Szukać do zmroku', hint: 'dwie osoby tracą po 10 zdrowia · może się uda', record: st => `Uchylone drzwi: poszukiwania (${P(st, st.flags.gone).name}).`,
+        act: st => { const p = P(st, st.flags.gone); for (const q of strongest(st, 2)) q.health = clamp(q.health - 10); if (rng(st) < 0.4) { p.here = true; p.health = 15; st.hope += 6; return `Znaleźli ${g(p, 'go', 'ją')} pod świerkiem, sto metrów od schroniska. ${g(p, 'Żyje', 'Żyje')}.`; } p.here = true; kill(st, p); st.hope -= 12; return 'Wracają po ciemku sami. Nikt nie pyta, czy coś znaleźli.'; } },
+      { label: 'Zamknąć drzwi', hint: '−5 nadziei', record: st => `Uchylone drzwi: nikt nie szukał (${P(st, st.flags.gone).name}).`,
+        act: st => { const p = P(st, st.flags.gone); p.here = true; kill(st, p); st.hope -= 5; return 'Zasuwasz rygiel. Dźwięk niesie się po całym schronisku.'; } },
+    ] },
+  { id: 'odmowa', prio: 2, repeat: 4, when: st => st.hope < 30 && st.hope >= 15 && strongest(st, 1).length > 0, title: 'Nie dziś',
+    setup: st => { st.flags.refuser = strongest(st, 3).slice(-1)[0].id; },
+    text: st => { const p = P(st, st.flags.refuser); return [`${p.name} nie wstaje z łóżka. „Po co? I tak tu wszyscy zamarzniemy.”`]; },
+    choices: [
+      { label: `Dać spokój na jeden dzień`, hint: 'ta osoba dziś nie pracuje · +2 nadziei', act: st => { P(st, st.flags.refuser).refuse = st.day; st.hope += 2; return 'Wieczorem schodzi na kolację. To już coś.'; } },
+      { label: 'Wyciągnąć z łóżka do roboty', hint: '−5 zaufania', act: st => { st.trust -= 5; return 'Pracuje, ale tak, że lepiej by było, gdyby nie pracował wcale.'; } },
+    ] },
+];
+// ===== SIM-END =====
+
+// ---------- Widok ----------
+const $ = id => document.getElementById(id);
+let st, selRoom = 'swietlica', shownLog = 0, hintSeen = false;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LAYOUT = {
+  strych: { x: 22, y: 13.5, w: 38, h: 19, roof: true },
+  pokoj2: { x: 12.6, y: 33, w: 19, h: 23.6 },
+  pokoj1: { x: 32.1, y: 33, w: 37.3, h: 23.6 },
+  kuchnia: { x: 12.6, y: 57.2, w: 16.8, h: 26.2 },
+  swietlica: { x: 29.9, y: 57.2, w: 21.6, h: 26.2 },
+  jadalnia: { x: 52, y: 57.2, w: 17.4, h: 26.2 },
+  weranda: { x: 70, y: 63, w: 15.6, h: 20.4, porch: true },
+};
+const WIND = ['bez wiatru', 'wiatr', 'zamieć'];
+const deg = t => `${t < 0 ? '−' : ''}${Math.abs(Math.round(t))}°`;
+
+function roomColor(t) {
+  const stops = [[-12, [58, 82, 112]], [0, [84, 104, 124]], [8, [110, 104, 96]], [14, [150, 106, 66]], [20, [190, 128, 64]]];
+  if (t <= stops[0][0]) return `rgb(${stops[0][1]})`;
+  for (let k = 0; k < stops.length - 1; k++) {
+    const [t0, c0] = stops[k], [t1, c1] = stops[k + 1];
+    if (t <= t1) { const a = (t - t0) / (t1 - t0); return `rgb(${c0.map((v, i) => Math.round(v + (c1[i] - v) * a)).join(',')})`; }
+  }
+  return `rgb(${stops[stops.length - 1][1]})`;
+}
+const healthColor = h => h >= 65 ? '#E2E8DC' : h >= 40 ? '#EBC57C' : '#E28E7A';
+
+function preview() {
+  const c = JSON.parse(JSON.stringify(st));
+  const res = endDay(c, true);
+  const dp = {};
+  for (const p of st.people) { const q = c.people.find(x => x.id === p.id); if (p.alive && p.here) dp[p.id] = Math.round(q.health - p.health); }
+  return { ...res, wood: c.wood - st.wood, food: c.food - st.food, hope: c.hope - st.hope, trust: c.trust - st.trust, dp, dead: c.people.filter(p => !p.alive && P(st, p.id).alive && P(st, p.id).here).map(p => p.name) };
+}
+
+function render() {
+  const pv = preview();
+  renderHeader();
+  renderHut(pv);
+  renderRoomPanel(pv);
+  renderPeople(pv);
+  renderSide(pv);
+  renderLog();
+}
+
+function renderHeader() {
+  const w = st.weather[st.day - 1];
+  $('dayLabel').innerHTML = `Dzień ${st.day} <small>z ${DAYS}</small>`;
+  $('wxLabel').textContent = `${deg(w.t)}C · ${WIND[w.wind]}`;
+  const svg = $('forecast');
+  const bw = 300 / DAYS;
+  let s = '';
+  for (let d = 1; d <= DAYS; d++) {
+    const known = d <= st.day || (st.radioOn && d <= st.day + 5);
+    const t = known ? st.weather[d - 1].t : baseTemp(d);
+    const h = Math.max(2, Math.min(32, -t));
+    const x = (d - 1) * bw;
+    const fill = d === st.day ? 'var(--ember)' : d < st.day ? 'var(--muted)' : 'var(--frost)';
+    s += `<rect x="${x + 0.8}" y="${34 - h}" width="${bw - 1.6}" height="${h}" fill="${fill}" opacity="${d < st.day ? 0.45 : known ? 0.95 : 0.4}"></rect>`;
+    if (d === st.rescueDay && st.rescueDay < DAYS) s += `<rect x="${x}" y="0" width="${bw}" height="2" fill="var(--good)"></rect>`;
+  }
+  svg.innerHTML = s;
+  $('fcLegend').textContent = st.radioOn ? `Prognoza z radia na 5 dni · ratunek: dzień ${st.rescueDay}` : 'Mróz według ostatniego komunikatu (słupki: im wyższy, tym zimniej)';
+}
+
+function renderHut(pv) {
+  const hut = $('hut');
+  if (!hut.dataset.built) {
+    hut.innerHTML = '<div class="roof"></div><div class="chimney" id="chimney"><span class="smoke"></span><span class="smoke"></span><span class="smoke"></span></div><div class="walls"></div><div class="porch-roof" id="porchRoof"></div>';
+    for (const id of Object.keys(LAYOUT)) {
+      const L = LAYOUT[id], b = document.createElement('button');
+      b.className = 'room' + (L.roof ? ' roofroom' : '') + (L.porch ? ' porch' : '');
+      b.dataset.id = id;
+      Object.assign(b.style, { left: L.x + '%', top: L.y + '%', width: L.w + '%', height: L.h + '%' });
+      b.onclick = () => { selRoom = id; render(); };
+      hut.append(b);
+    }
+    hut.dataset.built = '1';
+  }
+  const where = {};
+  for (const [rid, ids] of Object.entries(pv.occ)) for (const id of ids) where[id] = rid;
+  for (const b of hut.querySelectorAll('.room')) {
+    const r = room(st, b.dataset.id), t = pv.temp[r.id];
+    const occ = pv.occ[r.id] || [];
+    b.classList.toggle('sel', selRoom === r.id);
+    b.classList.toggle('closed', !r.gone && !r.open && !r.outside);
+    b.classList.toggle('gone', r.gone);
+    if (!r.outside) b.style.setProperty('--room', r.gone ? 'transparent' : r.open ? roomColor(t) : '#2F353C');
+    let tag = '';
+    if (r.gone) tag = 'rozebrany';
+    else if (r.outside) tag = 'osłania świetlicę';
+    else if (r.project) tag = `${PROJECTS[r.project].name}…`;
+    else if (!r.open) tag = r.cap ? 'zamknięty' : 'nieużywany';
+    else if (r.cap) tag = `${occ.length}/${r.cap} ${plural(r.cap, 'miejsce', 'miejsca', 'miejsc')}`;
+    if (r.broken && !r.gone) tag += ' · wybita szyba';
+    const showT = !r.gone && !r.outside;
+    b.innerHTML = `<span class="r-head"><span class="r-name">${r.name}</span>${showT ? `<span class="r-t">${deg(t)}</span>` : ''}</span>`
+      + `<span class="r-ppl">${occ.map(id => { const p = P(st, id); return `<span class="tok${p.sick ? ' sick' : ''}${p.child ? ' child' : ''}" style="--hc:${healthColor(p.health)}" title="${p.name}">${p.name[0]}</span>`; }).join('')}</span>`
+      + `<span class="r-tag">${tag}</span>`
+      + (r.id === 'swietlica' ? `<span class="fire" style="opacity:${[0.55, 0.8, 1][st.stove]};transform:scale(${[0.7, 0.9, 1.15][st.stove]})"></span>` : '');
+    b.setAttribute('aria-label', `${r.name}${showT ? `, ${deg(t)} tej nocy` : ''}, ${tag}`);
+  }
+  $('porchRoof').hidden = room(st, 'weranda').gone;
+  $('chimney').style.setProperty('--drift', `${30 + st.weather[st.day - 1].wind * 40}px`);
+  const away = st.people.filter(p => p.alive && !p.here && p.end !== 'evac' && p.end !== 'help' && st.trips.some(t => t.ids.includes(p.id)));
+  const evac = st.people.filter(p => p.end === 'evac' || p.end === 'help');
+  const chip = $('awayChip');
+  const parts = [];
+  if (away.length) parts.push(`W drodze: ${away.map(p => p.name).join(', ')}`);
+  if (evac.length) parts.push(`Bezpieczni na dole: ${evac.map(p => p.name).join(', ')}`);
+  chip.hidden = !parts.length; chip.textContent = parts.join(' · ');
+}
+
+function renderRoomPanel(pv) {
+  const r = room(st, selRoom), el = $('roomPanel');
+  const occ = (pv.occ[r.id] || []).map(id => P(st, id).name);
+  let info;
+  if (r.gone) info = 'Rozebrany na opał.';
+  else if (r.outside) info = 'Weranda osłania świetlicę od wiatru (+1 izolacji). Rozebrana da sporo suchego drewna.';
+  else {
+    const ins = '●'.repeat(Math.max(0, r.ins)) + '○'.repeat(Math.max(0, 3 - r.ins));
+    info = `Tej nocy ${deg(pv.temp[r.id])}C · izolacja ${ins}`;
+    if (r.cap) info += ` · ${occ.length ? 'śpią tu: ' + occ.join(', ') : 'nikt tu nie śpi'}${occ.length > r.cap ? ' (tłok!)' : ''}`;
+    else info += ' · nie ma tu gdzie spać';
+    if (r.fixed) info += ' · tu stoi piec, nie da się zamknąć';
+  }
+  const acts = [];
+  if (!r.gone && !r.outside && !r.fixed && r.cap > 0) acts.push(`<button class="btn" data-act="toggle">${r.open ? 'Zamknąć na noc' : 'Otworzyć'}</button>`);
+  if (!r.gone && r.project) acts.push(`<button class="btn" data-act="cancel">Wstrzymać: ${PROJECTS[r.project].name} (zwrot ${PROJECTS[r.project].wood})</button>`);
+  if (!r.gone && !r.outside && !r.project) {
+    if (r.broken) acts.push(`<button class="btn" data-act="queue" data-kind="okno" ${st.wood < 6 ? 'disabled' : ''}>Naprawić okno (−6 drewna)</button>`);
+    if (r.ins < 3 && (r.cap > 0 || r.fixed)) acts.push(`<button class="btn" data-act="queue" data-kind="ins" ${st.wood < 12 ? 'disabled' : ''}>Ocieplić (−12 drewna)</button>`);
+    if (r.convert === 'izba' && r.func !== 'izba') acts.push(`<button class="btn" data-act="queue" data-kind="izba" ${st.wood < 8 ? 'disabled' : ''}>Przerobić na izbę chorych (−8)</button>`);
+    if (r.convert === 'sypialnia' && r.cap === 0) acts.push(`<button class="btn" data-act="queue" data-kind="sypialnia" ${st.wood < 15 ? 'disabled' : ''}>Zrobić sypialnię (−15)</button>`);
+  }
+  if (r.strip && !r.gone) acts.push(`<button class="btn danger" data-act="strip">${stripArmed === r.id ? 'Na pewno? Tego nie da się cofnąć' : `Rozebrać na opał (+${r.strip})`}</button>`);
+  const note = r.project ? '<p>Prace skończy ktoś przy naprawach.</p>' : '';
+  el.innerHTML = `<div><h2>${r.name}</h2><p>${info}</p>${note}</div><div class="roomacts">${acts.join('')}</div>`;
+  el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const act = b.dataset.act;
+    if (act === 'strip' && stripArmed !== r.id) { stripArmed = r.id; renderRoomPanel(pv); return; }
+    stripArmed = null;
+    roomAction(st, r.id, act, b.dataset.kind);
+    render();
+  });
+}
+let stripArmed = null;
+
+function jobOptions(p) {
+  const opts = ['rest', 'wood', 'hunt', 'cook', 'care', 'fix'];
+  if (p.id === 'kuba' && st.flags.radioJob && !st.radioOn) opts.push('radio');
+  return opts;
+}
+function statusOf(p) {
+  if (!p.alive) return p.end === 'left' ? 'odszedł w nocy' : p.end === 'lost' ? 'nie wpuszczono' : `nie żyje (dzień ${p.diedDay})`;
+  if (p.end === 'evac') return 'ewakuowany śmigłowcem'.replace('ewakuowany', g(p, 'ewakuowany', 'ewakuowana'));
+  if (p.end === 'help') return 'sprowadza ratowników';
+  if (!p.here) return 'w drodze';
+  if (p.sick) return 'gorączka';
+  if (p.refuse === st.day) return 'nie chce dziś wstać';
+  if (p.health < 40) return g(p, 'bardzo słaby', 'bardzo słaba');
+  if (p.health < 65) return g(p, 'osłabiony', 'osłabiona');
+  return g(p, 'zdrowy', 'zdrowa');
+}
+
+function renderPeople(pv) {
+  const el = $('people');
+  const list = st.people.filter(p => p.end !== 'lost');
+  el.innerHTML = '';
+  for (const p of list) {
+    const active = p.alive && p.here;
+    const c = document.createElement('div');
+    c.className = 'pcard' + (active ? '' : ' gone');
+    const d = pv.dp[p.id];
+    const cls = p.health >= 65 ? '' : p.health >= 40 ? 'mid' : 'low';
+    const delta = active && d != null ? `<span class="delta ${d < 0 ? 'neg' : d > 0 ? 'pos' : ''}">noc: ${d === 0 ? '0' : sgn(d)}</span>` : '';
+    let ctl;
+    if (!active) ctl = '';
+    else if (p.child) ctl = '<div class="fixed">Siedzi przy piecu z kredkami.</div>';
+    else if (p.sick) ctl = `<div class="fixed">${g(p, 'Leży chory', 'Leży chora')}. Pomoże opieka.</div>`;
+    else if (p.refuse === st.day) ctl = '<div class="fixed">Dziś nie pracuje.</div>';
+    else ctl = `<label class="sr-only" for="job-${p.id}">Zajęcie: ${p.name}</label><select id="job-${p.id}">${jobOptions(p).map(j => `<option value="${j}" ${p.job === j ? 'selected' : ''}>${JOBS[j].name}</option>`).join('')}</select>`;
+    c.innerHTML = `<div class="p-top"><b>${p.name}</b><span class="role">${p.role}</span></div>`
+      + (p.alive ? `<div class="hbar"><i class="${cls}" style="width:${p.health}%"></i></div>` : '')
+      + `<div class="p-meta"><span>${statusOf(p)}${active ? ` · ${Math.round(p.health)}` : ''}</span>${delta}</div>${ctl}`;
+    const sel = c.querySelector('select');
+    if (sel) sel.onchange = () => { p.job = sel.value; render(); };
+    el.append(c);
+  }
+}
+
+function renderSide(pv) {
+  const need = woodNeed(st);
+  $('woodV').textContent = Math.round(st.wood);
+  $('woodS').textContent = `Piec pali ${need} dziennie · ${st.wood >= need ? `starczy na ~${Math.floor(st.wood / need)} ${plural(Math.floor(st.wood / need), 'dzień', 'dni', 'dni')}` : 'nie starczy na tę noc'} · jutro ${sgn(pv.wood)}`;
+  const plan = foodPlan(st);
+  $('foodV').textContent = Math.round(st.food);
+  $('foodS').textContent = `${plan.need.toFixed(1).replace('.', ',')} ${plural(Math.round(plan.need), 'porcja', 'porcje', 'porcji')} dziennie · ${plan.need > 0 ? `starczy na ~${Math.floor(st.food / plan.need)} ${plural(Math.floor(st.food / plan.need), 'dzień', 'dni', 'dni')}` : ''}`;
+  $('hopeBar').style.width = st.hope + '%'; $('hopeN').textContent = Math.round(st.hope);
+  $('trustBar').style.width = st.trust + '%'; $('trustN').textContent = Math.round(st.trust);
+  $('stoveSeg').innerHTML = STOVE.map((s, i) => `<button aria-pressed="${st.stove === i}" data-i="${i}"><b>${s.name}</b><small>${s.wood + (hasRule(st, 'stories') ? 2 : 0)} polan</small></button>`).join('');
+  $('stoveSeg').querySelectorAll('button').forEach(b => b.onclick = () => { st.stove = +b.dataset.i; render(); });
+  $('rationSeg').innerHTML = RATIONS.map((r, i) => `<button aria-pressed="${st.ration === i}" data-i="${i}"><b>${r.name}</b><small>${r.note}</small></button>`).join('');
+  $('rationSeg').querySelectorAll('button').forEach(b => b.onclick = () => { st.ration = +b.dataset.i; render(); });
+  $('rulesList').innerHTML = st.rules.length ? st.rules.map(id => `<li>${RULES.find(r => r.id === id).name}</li>`).join('') : '<li class="none">Na razie żadnych.</li>';
+  const canRule = st.day >= st.ruleDay && RULES.some(r => !hasRule(st, r.id));
+  $('rulesBtn').disabled = !canRule;
+  $('rulesBtn').textContent = canRule ? 'Wprowadź zasadę' : st.day < st.ruleDay ? `Następna zasada: dzień ${st.ruleDay}` : 'Wszystkie zasady wprowadzone';
+  $('endBtn').textContent = $('endBtnM').textContent = `Zakończ dzień ${st.day}`;
+  const warn = [];
+  if (pv.dead.length) warn.push(`${pv.dead.join(', ')} ${pv.dead.length > 1 ? 'mogą' : 'może'} nie przeżyć tej nocy.`);
+  if (st.wood < need) warn.push('Drewna nie starczy na całą noc.');
+  else if (st.wood + pv.wood < need * 2) warn.push('Po tej nocy drewna zostanie na niecałe dwa dni.');
+  if (plan.need > st.food) warn.push('Jedzenia nie starczy dla wszystkich.');
+  const sickN = alive(st).filter(p => p.sick).length;
+  if (sickN && !alive(st).some(p => p.job === 'care' && canWork(st, p))) warn.push(`Nikt nie opiekuje się chorymi (${sickN}).`);
+  if (st.rooms.some(r => r.project && !r.gone) && !alive(st).some(p => p.job === 'fix' && canWork(st, p))) warn.push('Prace w pokojach czekają na kogoś przy naprawach.');
+  $('warnings').innerHTML = warn.map(w => `<div>${w}</div>`).join('');
+}
+
+function renderLog() {
+  const ol = $('log');
+  if (shownLog > st.log.length) { ol.innerHTML = ''; shownLog = 0; }
+  while (shownLog < st.log.length) {
+    const e = st.log[shownLog++];
+    const li = document.createElement('li');
+    if (e.kind) li.className = e.kind;
+    li.innerHTML = '<span class="d"></span><span class="t"></span>';
+    li.firstChild.textContent = `Dzień ${e.day}`; li.lastChild.textContent = e.text;
+    ol.prepend(li);
+  }
+}
+
+// ---------- Okna ----------
+function showEvent() {
+  const e = EVENTS.find(x => x.id === st.event);
+  const layer = $('eventLayer');
+  $('evEyebrow').textContent = `Księga schroniska · dzień ${st.day}`;
+  $('evReport').innerHTML = (st.report || []).map(l => `<li>${l}</li>`).join('');
+  $('evResult').hidden = true;
+  if (!e) {
+    $('evTitle').textContent = `Ranek, dzień ${st.day}`;
+    $('evText').innerHTML = `<p>${morningLine()}</p>`;
+    $('evChoices').innerHTML = '<button class="choice" data-i="-1"><b>Do roboty</b></button>';
+  } else {
+    $('evTitle').textContent = e.title;
+    $('evText').innerHTML = e.text(st).map(p => `<p>${p}</p>`).join('');
+    $('evChoices').innerHTML = e.choices.map((c, i) => {
+      const ok = !c.ok || c.ok(st);
+      const hint = typeof c.hint === 'function' ? c.hint(st) : c.hint;
+      return `<button class="choice" data-i="${i}" ${ok ? '' : 'disabled'}><b>${typeof c.label === 'function' ? c.label(st) : c.label}</b>${hint ? `<small>${hint}</small>` : ''}</button>`;
+    }).join('');
+  }
+  $('evChoices').hidden = false;
+  $('evChoices').querySelectorAll('.choice').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i;
+    st.report = [];
+    if (i < 0) { closeEvent(); return; }
+    const text = choose(st, i);
+    $('evChoices').hidden = true;
+    $('evReport').innerHTML = '';
+    $('evResultText').textContent = text;
+    $('evResult').hidden = false;
+    $('evNext').focus();
+  });
+  layer.hidden = false;
+  const first = layer.querySelector('.choice:not(:disabled)');
+  if (first) first.focus();
+}
+function morningLine() {
+  const w = st.weather[st.day - 1];
+  if (w.wind === 2) return `Zamieć. Za oknem ${deg(w.t)}C i nie widać nawet szopy.`;
+  if (w.t <= -20) return `Mróz ${deg(w.t)}C. Szyby od środka pokryte są szronem.`;
+  if (st.day >= 26) return `${deg(w.t)}C. Z dachu pierwszy raz od tygodni kapie woda.`;
+  return `${deg(w.t)}C${w.wind ? ', wieje od przełęczy' : ''}. Kolejny dzień w schronisku.`;
+}
+function closeEvent() {
+  $('eventLayer').hidden = true;
+  if (st.over) { showEnd(); return; }
+  if (st.flags.openRules) { st.flags.openRules = false; openRules(); }
+  if (!hintSeen) { hintSeen = true; $('hint').hidden = false; }
+  render();
+}
+$('evNext').onclick = closeEvent;
+$('hintOk').onclick = () => { $('hint').hidden = true; };
+
+function openRules() {
+  const can = st.day >= st.ruleDay;
+  $('rulesNote').textContent = can ? 'Możesz wprowadzić jedną zasadę. Następną dopiero za trzy dni. Zasady obowiązują do końca.' : `Następną zasadę możesz wprowadzić ${st.ruleDay}. dnia.`;
+  $('rulesCards').innerHTML = RULES.map(r => `<div class="rulecard"><b>${r.name}</b><p>${r.text}</p><small>${r.cost}</small>${hasRule(st, r.id) ? '<span class="btn" aria-disabled="true">Obowiązuje</span>' : `<button class="btn warm" data-id="${r.id}" ${can ? '' : 'disabled'}>Wprowadzić</button>`}</div>`).join('');
+  $('rulesCards').querySelectorAll('button[data-id]').forEach(b => b.onclick = () => { adoptRule(st, b.dataset.id); $('rulesLayer').hidden = true; if (st.over) showEnd(); render(); });
+  $('rulesLayer').hidden = false;
+}
+$('rulesBtn').onclick = openRules;
+$('rulesClose').onclick = () => { $('rulesLayer').hidden = true; };
+
+function endTurn() {
+  if ($('endBtn').disabled) return;
+  const btns = [$('endBtn'), $('endBtnM')];
+  for (const b of btns) b.disabled = true;
+  const w = st.weather[st.day - 1];
+  $('nightText').textContent = `Noc ${st.day}. ${deg(w.t)}C${w.wind === 2 ? ', zamieć wyje w kominie' : w.wind ? ', wiatr szarpie okiennicami' : ''}.`;
+  const night = $('night');
+  night.classList.add('on');
+  setTimeout(() => {
+    endDay(st);
+    selRoom = room(st, selRoom).gone ? 'swietlica' : selRoom;
+    stripArmed = null;
+    render();
+    drawBackground();
+    setTimeout(() => {
+      night.classList.remove('on');
+      for (const b of btns) b.disabled = false;
+      if (st.over) showEnd(); else showEvent();
+    }, reduceMotion ? 0 : 700);
+  }, reduceMotion ? 0 : 900);
+}
+$('endBtn').onclick = endTurn;
+$('endBtnM').onclick = endTurn;
+
+function showEnd() {
+  const survivors = st.people.filter(p => p.end !== 'lost' && (p.alive || p.end === 'evac' || p.end === 'help'));
+  const total = st.people.filter(p => p.end !== 'lost').length;
+  const lostN = st.people.filter(p => p.end === 'lost').length;
+  const titles = {
+    rescue: st.day < DAYS ? `Dzień ${st.day}. Słychać skutery GOPR.` : `Dzień ${st.day}. Odwilż.`,
+    empty: 'Schronisko opustoszało.',
+    keys: 'Goście odebrali ci klucze.',
+  };
+  const texts = {
+    rescue: ['Ratownicy wchodzą do świetlicy, otrzepując śnieg z kurtek. Ktoś parzy herbatę z ostatniej paczki. Przez chwilę nikt nic nie mówi.'],
+    empty: ['Kiedy ratownicy dotarli na górę, w piecu był tylko zimny popiół.'],
+    keys: [`Od dziś spiżarnią i piecem zarządzają ${strongest(st, 2).map(p => p.name).join(' i ') || 'inni'}. Ty śpisz na strychu i czekasz na odwilż razem z resztą.`],
+  };
+  $('endEyebrow').textContent = st.over === 'keys' ? 'Koniec gospodarzenia' : 'Koniec zimy';
+  $('endTitle').textContent = titles[st.over];
+  $('endText').innerHTML = texts[st.over].map(t => `<p>${t}</p>`).join('');
+  $('endStats').textContent = `Przeżyło ${survivors.length} z ${total} ${plural(total, 'osoby', 'osób', 'osób')}${lostN ? `. ${lostN} ${plural(lostN, 'osoby', 'osób', 'osób')} nie wpuszczono do środka` : ''}.`;
+  $('endFates').innerHTML = st.people.map(p => {
+    let line;
+    if (p.end === 'lost') line = 'Nikt ich już nie widział.';
+    else if (p.end === 'left') line = 'Odszedł w nocy w zamieć. Nie wiadomo, czy dotarł na drugą stronę.';
+    else if (p.end === 'evac') line = `${g(p, 'Ewakuowany', 'Ewakuowana')} śmigłowcem. ${p.fate[0]}`;
+    else if (p.end === 'help') line = `Sprowadził ratowników z Wetliny. ${p.fate[0]}`;
+    else if (p.alive) line = p.fate[0];
+    else line = `${p.fate[1]} (dzień ${p.diedDay})`;
+    const dead = !p.alive && p.end !== 'evac' && p.end !== 'help';
+    return `<li class="${dead ? 'dead' : ''}"><b>${p.name}</b><span>${line}</span></li>`;
+  }).join('');
+  $('endDecisions').innerHTML = st.decisions.map(d => `<li>${d}</li>`).join('') || '<li>Żadnych ważnych decyzji. To też decyzja.</li>';
+  const ratio = survivors.length / total;
+  let quote;
+  if (st.over === 'keys') quote = '„Gospodarz miał dobre intencje. Tylko że nikt mu już nie wierzył.”';
+  else if (st.over === 'empty') quote = '„Czy było warto?”';
+  else if (ratio >= 0.9 && st.trust >= 50 && !lostN) quote = '„Gospodarz nie dał nam zamarznąć. Ani się poddać.”';
+  else if (st.trust < 30) quote = '„Przeżyliśmy. Nie pytajcie, jakim kosztem.”';
+  else if (total - survivors.length >= 3 || lostN) quote = '„Co roku w lutym jeżdżę tam i zapalam znicz przy szopie.”';
+  else quote = '„Do dziś, kiedy pada śnieg, liczę polana.”';
+  $('endQuote').textContent = quote;
+  $('endLayer').hidden = false;
+  $('endAgain').focus();
+}
+$('endAgain').onclick = () => { $('endLayer').hidden = true; startGame(); };
+
+// ---------- Tło i śnieg ----------
+const bg = $('bg'), bctx = bg.getContext('2d'), snow = $('snow'), sctx = snow.getContext('2d');
+let flakes = [], sw = 0, sh = 0, sdpr = 1;
+function sizeCanvases() {
+  const r = $('scene').getBoundingClientRect();
+  sdpr = Math.min(2, window.devicePixelRatio || 1);
+  sw = Math.max(10, Math.round(r.width * sdpr)); sh = Math.max(10, Math.round(r.height * sdpr));
+  for (const c of [bg, snow]) { c.width = sw; c.height = sh; }
+  drawBackground();
+}
+function drawBackground() {
+  if (!st || sw < 20) return;
+  const w = st.weather[st.day - 1], storm = w.wind === 2;
+  const sky = bctx.createLinearGradient(0, 0, 0, sh * 0.85);
+  sky.addColorStop(0, storm ? '#121A24' : '#1C2B40'); sky.addColorStop(1, storm ? '#2E3B49' : '#50677F');
+  bctx.fillStyle = sky; bctx.fillRect(0, 0, sw, sh);
+  const ridge = (base, amp, col, seed) => {
+    bctx.beginPath(); bctx.moveTo(0, sh);
+    for (let x = 0; x <= sw; x += Math.max(4, sw / 60)) {
+      const k = x / sw;
+      bctx.lineTo(x, sh * (base - amp * (0.5 + 0.5 * Math.sin(k * 5.2 + seed) * Math.cos(k * 2.3 + seed * 2))));
+    }
+    bctx.lineTo(sw, sh); bctx.closePath(); bctx.fillStyle = col; bctx.fill();
+  };
+  ridge(0.62, 0.22, storm ? 'rgba(150,165,180,0.25)' : 'rgba(176,192,208,0.35)', 1.3);
+  ridge(0.72, 0.14, storm ? 'rgba(120,136,150,0.35)' : 'rgba(132,152,170,0.55)', 4.1);
+  const tree = (x, s) => {
+    bctx.fillStyle = '#16232A';
+    for (let k = 0; k < 3; k++) {
+      bctx.beginPath(); const y = sh * 0.84 - s * (0.35 + k * 0.3);
+      bctx.moveTo(x, y - s * 0.5); bctx.lineTo(x - s * (0.38 - k * 0.08), y + s * 0.2); bctx.lineTo(x + s * (0.38 - k * 0.08), y + s * 0.2); bctx.closePath(); bctx.fill();
+    }
+  };
+  for (const [x, s] of [[0.03, 0.16], [0.07, 0.11], [0.92, 0.17], [0.96, 0.12], [0.88, 0.1]]) tree(sw * x, sh * s);
+  const gr = bctx.createLinearGradient(0, sh * 0.82, 0, sh);
+  gr.addColorStop(0, '#DCE4EB'); gr.addColorStop(1, '#AFBCC8');
+  bctx.fillStyle = gr; bctx.fillRect(0, sh * 0.83, sw, sh * 0.17);
+  const warm = clamp((nightTemps(st).swietlica + 5) / 30, 0, 1);
+  const glow = bctx.createRadialGradient(sw * 0.4, sh * 0.86, 0, sw * 0.4, sh * 0.86, sw * 0.3);
+  glow.addColorStop(0, `rgba(255, 190, 110, ${0.25 * warm})`); glow.addColorStop(1, 'rgba(255, 190, 110, 0)');
+  bctx.fillStyle = glow; bctx.fillRect(0, sh * 0.6, sw, sh * 0.4);
+}
+function tickSnow() {
+  if (st) {
+    const wind = st.weather[st.day - 1].wind;
+    const want = reduceMotion ? 40 : [70, 140, 320][wind];
+    while (flakes.length < want) flakes.push({ x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 1.8, v: 0.4 + Math.random() * 0.8 });
+    if (flakes.length > want) flakes.length = want;
+    sctx.clearRect(0, 0, sw, sh);
+    sctx.fillStyle = 'rgba(240, 246, 252, 0.85)';
+    const vx = [0.0004, 0.0022, 0.006][wind], vy = 0.0018;
+    for (const f of flakes) {
+      if (!reduceMotion) { f.x += vx * f.v + Math.sin(f.y * 20) * 0.0003; f.y += vy * f.v; }
+      if (f.y > 1) { f.y = 0; f.x = Math.random(); }
+      if (f.x > 1) f.x -= 1;
+      sctx.beginPath(); sctx.arc(f.x * sw, f.y * sh, f.r * sdpr, 0, Math.PI * 2); sctx.fill();
+    }
+  }
+  requestAnimationFrame(tickSnow);
+}
+new ResizeObserver(sizeCanvases).observe($('scene'));
+
+function startGame(saved) {
+  st = saved || newGame(Math.floor(Math.random() * 1e9));
+  selRoom = 'swietlica'; shownLog = 0; stripArmed = null;
+  $('log').innerHTML = '';
+  render();
+  drawBackground();
+  if (st.over) showEnd();
+  else if (!saved || st.event) showEvent();
+}
+
+function start(data) {
+  if (data && data.ui) hintSeen = !!data.ui.hintSeen;
+  startGame(data && data.st);
+  sizeCanvases();
+  requestAnimationFrame(tickSnow);
+}
+window.claude?.hot?.snapshot?.(() => ({ st, ui: { hintSeen } }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
