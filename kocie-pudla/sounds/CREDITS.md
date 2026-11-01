@@ -1,7 +1,7 @@
-# Dźwięki w Kocich Pudłach
+# Dźwięki w Kocich Ławkach
 
 Wszystkie dźwięki to prawdziwe nagrania z [Wikimedia Commons](https://commons.wikimedia.org) i [Internet Archive](https://archive.org).
-Pliki zostały przycięte, wyrównane głośnościowo i zakodowane do MP3. Nic tu nie jest syntezowane, z wyjątkiem cichego „tup”, gdy kot ląduje w kartonie.
+Pliki zostały przycięte, wyrównane głośnościowo i zakodowane do MP3. Nic tu nie jest syntezowane, z wyjątkiem krótkiego „tok”, gdy kot siada na ławce.
 
 ## Muzyka
 

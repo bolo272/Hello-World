@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kocie Pudła</title>
+<title>Kocie Ławki</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@600;700;800;900&display=swap">
 <style>
-/* Layout: one-screen game — top bar, cardboard boxes standing on the floor in the middle, tool dock at the bottom */
+/* Layout: one-screen game — top bar, rows of park benches in the middle, tool dock at the bottom */
 :root {
   --wall: #E3E6F6;        /* periwinkle wallpaper */
   --wall-dot: #CED4F0;
@@ -21,10 +21,11 @@
   --panel-line: #CBD0EC;
   --veil: rgba(227, 230, 246, .78);
   --shadow: rgba(37, 41, 80, .16);
-  --kraft: #D29C61;       /* cardboard */
-  --kraft-dark: #AD773F;
-  --kraft-in: #82582F;
-  --kraft-line: #7A4F25;
+  --wood: #C4813F;        /* park bench planks */
+  --wood-light: #DDA265;
+  --wood-dark: #93592A;
+  --wood-line: #6B4020;
+  --iron: #3B3F5E;        /* cast-iron legs */
   --good: #23935F;
   --font-display: "Bagel Fat One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --font-body: "Nunito", "Segoe UI", system-ui, sans-serif;
@@ -34,7 +35,7 @@
     --wall: #1B1E3A; --wall-dot: #272B52; --ink: #EEF0FF; --ink-soft: #A5AADA;
     --accent: #FF79A8; --accent-ink: #2B0B1A; --panel: #252A4E; --panel-line: #3A4072;
     --veil: rgba(27, 30, 58, .8); --shadow: rgba(0, 0, 0, .38);
-    --kraft: #C38E55; --kraft-dark: #96642F; --kraft-in: #5E3F21; --kraft-line: #5A3A18; --good: #5BD39A;
+    --wood: #B57638; --wood-light: #CC925A; --wood-dark: #7E4C22; --wood-line: #4A2C12; --iron: #8D93C4; --good: #5BD39A;
     color-scheme: dark;
   }
 }
@@ -42,7 +43,7 @@
   --wall: #1B1E3A; --wall-dot: #272B52; --ink: #EEF0FF; --ink-soft: #A5AADA;
   --accent: #FF79A8; --accent-ink: #2B0B1A; --panel: #252A4E; --panel-line: #3A4072;
   --veil: rgba(27, 30, 58, .8); --shadow: rgba(0, 0, 0, .38);
-  --kraft: #C38E55; --kraft-dark: #96642F; --kraft-in: #5E3F21; --kraft-line: #5A3A18; --good: #5BD39A;
+  --wood: #B57638; --wood-light: #CC925A; --wood-dark: #7E4C22; --wood-line: #4A2C12; --iron: #8D93C4; --good: #5BD39A;
   color-scheme: dark;
 }
 
@@ -71,6 +72,11 @@ button { font: inherit; color: inherit; }
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
+/* explicit rows, so a hidden tip does not shift the board out of the 1fr row */
+.top { grid-row: 1; }
+.tip { grid-row: 2; }
+.board-wrap { grid-row: 3; }
+.dock { grid-row: 4; }
 
 /* ---------- top bar ---------- */
 .top {
@@ -149,70 +155,80 @@ button { font: inherit; color: inherit; }
 .board {
   --s: 60px;
   display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
-  column-gap: calc(var(--s) * .26 + 6px);
-  row-gap: calc(var(--s) * .3 + 8px);
+  column-gap: calc(var(--s) * .3 + 10px);
+  row-gap: calc(var(--s) * .22 + 8px);
   margin: 0 auto;
   width: 100%;
 }
-.box {
+.bench {
   position: relative;
-  width: calc(var(--s) * 1.16 + 14px);
-  padding: calc(var(--s) * .5) 7px 22px;
+  width: calc(var(--s) * 4.36 + 12px);
+  padding: calc(var(--s) * .3) calc(var(--s) * .18 + 6px) calc(var(--s) * .38 + 3px);
   border: 0; background: none; cursor: pointer;
   display: block;
   border-radius: 12px;
   touch-action: manipulation;
 }
-.box:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
-.box::after {
-  content: ""; position: absolute; left: 4%; right: 4%; bottom: -7px; height: 12px;
+.bench:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.bench::after {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -5px; height: 10px;
   border-radius: 50%; background: var(--shadow);
 }
-.shell {
-  position: absolute; left: 0; right: 0; bottom: 0; top: calc(var(--s) * .42);
-  border-radius: 4px 4px 12px 12px;
+.posts {
+  position: absolute;
+  left: calc(var(--s) * .16 + 4px); right: calc(var(--s) * .16 + 4px);
+  top: calc(var(--s) * .34); bottom: calc(var(--s) * .3);
+  border-left: calc(var(--s) * .07 + 2px) solid var(--iron);
+  border-right: calc(var(--s) * .07 + 2px) solid var(--iron);
+  border-radius: 3px 3px 0 0;
+}
+.backrest {
+  position: absolute;
+  left: calc(var(--s) * .08 + 3px); right: calc(var(--s) * .08 + 3px);
+  top: calc(var(--s) * .4); height: calc(var(--s) * .62);
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, 0) 22%),
-    linear-gradient(90deg, var(--kraft-dark) 0 7px, var(--kraft-in) 7px calc(100% - 7px), var(--kraft-dark) calc(100% - 7px));
+    linear-gradient(180deg, var(--wood-light), var(--wood) 70%, var(--wood-dark)) 0 0 / 100% 30% no-repeat,
+    linear-gradient(180deg, var(--wood-light), var(--wood) 70%, var(--wood-dark)) 0 64% / 100% 30% no-repeat;
+  border-radius: 3px;
+}
+.seat {
+  position: absolute;
+  left: calc(var(--s) * .04); right: calc(var(--s) * .04);
+  bottom: calc(var(--s) * .22); height: calc(var(--s) * .16 + 6px);
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--wood-light) 0 30%, var(--wood) 30% 100%);
+  box-shadow: inset 0 -3px 0 var(--wood-dark);
+  display: grid; place-items: center;
   transition: box-shadow .15s;
 }
-.flap { position: absolute; background: var(--kraft); }
-.flap.back {
-  left: 7px; right: 7px; top: calc(var(--s) * .14); height: calc(var(--s) * .3);
-  background: var(--kraft-dark);
-  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
+.seat::before, .seat::after {
+  content: ""; position: absolute; top: 100%;
+  width: calc(var(--s) * .08 + 3px); height: calc(var(--s) * .22);
+  background: var(--iron);
+  border-radius: 0 0 3px 3px;
 }
-.flap.fl, .flap.fr { top: calc(var(--s) * .06); height: calc(var(--s) * .38); width: calc(var(--s) * .34); }
-.flap.fl { left: calc(var(--s) * -.2); clip-path: polygon(0 0, 34% 0, 100% 100%, 58% 100%); }
-.flap.fr { right: calc(var(--s) * -.2); clip-path: polygon(66% 0, 100% 0, 42% 100%, 0 100%); }
+.seat::before { left: calc(var(--s) * .14); }
+.seat::after { right: calc(var(--s) * .14); }
+.num { position: relative; top: 12%; font-family: var(--font-display); font-size: calc(var(--s) * .1 + 7px); line-height: 1; color: var(--wood-line); opacity: .95; }
 .inside {
   position: relative;
-  width: var(--s); height: calc(var(--s) * .84 * 4);
+  width: calc(var(--s) * 4); height: calc(var(--s) * .84);
   margin: 0 auto;
-  display: flex; flex-direction: column-reverse;
+  display: flex; flex-direction: row;
 }
-.lip {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 28px;
-  border-radius: 3px 3px 12px 12px;
-  background: linear-gradient(180deg, var(--kraft) 0 70%, var(--kraft-dark));
-  border-top: 2px solid var(--kraft-line);
-  display: grid; place-items: center;
-}
-.num { font-family: var(--font-display); font-size: 14px; line-height: 1; color: var(--kraft-line); opacity: .75; }
-.box:hover .shell { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .12); }
-.box.sel .shell { box-shadow: 0 0 0 3px var(--accent); }
-.box.sel .lip { border-top-color: var(--accent); }
+.bench:hover .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), inset 0 0 0 2px rgba(255, 255, 255, .18); }
+.bench.sel .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), 0 0 0 3px var(--accent); }
+.bench.done .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), 0 0 0 2px var(--good); }
 .heart {
-  position: absolute; left: 50%; top: calc(var(--s) * -.1);
-  width: calc(var(--s) * .44); height: calc(var(--s) * .44);
+  position: absolute; left: 50%; top: calc(var(--s) * -.18);
+  width: calc(var(--s) * .4); height: calc(var(--s) * .4);
   transform: translateX(-50%) scale(0);
   color: var(--accent);
   pointer-events: none;
 }
 .heart svg { width: 100%; height: 100%; display: block; fill: currentColor; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .15)); }
-.box.done .heart { transform: translateX(-50%) scale(1); }
-.box.just-done .heart { animation: heartPop .7s cubic-bezier(.3, 1.6, .5, 1); }
-.box.done .lip { border-top-color: var(--good); }
+.bench.done .heart { transform: translateX(-50%) scale(1); }
+.bench.just-done .heart { animation: heartPop .7s cubic-bezier(.3, 1.6, .5, 1); }
 
 .cat { display: block; position: relative; width: var(--s); height: calc(var(--s) * .84); flex: none; }
 .cat-in { display: block; width: 100%; height: 100%; }
@@ -223,7 +239,7 @@ button { font: inherit; color: inherit; }
 .zz { transform-box: fill-box; transform-origin: left bottom; animation: zz 2.6s ease-in-out infinite; animation-delay: var(--d, 0s); fill: #FFFFFF; }
 
 .shake { animation: shake .36s; }
-.hint-from .shell, .hint-to .shell { animation: hint .8s ease-in-out 2; }
+.hint-from .seat, .hint-to .seat { animation: hint .8s ease-in-out 2; }
 .hint-from .cat:last-child .cat-in { animation: hop .4s ease-out 3; }
 
 /* ---------- toast ---------- */
@@ -307,9 +323,9 @@ button { font: inherit; color: inherit; }
   border-radius: 16px;
   background: var(--accent); color: var(--accent-ink);
   font-family: var(--font-display); font-size: 19px; letter-spacing: .01em;
-  box-shadow: 0 4px 0 var(--kraft-line);
+  box-shadow: 0 4px 0 var(--wood-line);
 }
-.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--kraft-line); }
+.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--wood-line); }
 .paw { position: absolute; left: 50%; top: 40%; width: 26px; height: 26px; pointer-events: none; }
 .paw svg { width: 100%; height: 100%; fill: currentColor; display: block; }
 
@@ -335,8 +351,8 @@ button { font: inherit; color: inherit; }
   .tip { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eyes, .zz, .cat.lift .cat-in, .cat.reveal .cat-in, .win-card, .box.just-done .heart, .music-btn.playing svg { animation: none; }
-  .shake, .hint-from .shell, .hint-to .shell, .hint-from .cat:last-child .cat-in { animation-duration: .01s; }
+  .eyes, .zz, .cat.lift .cat-in, .cat.reveal .cat-in, .win-card, .bench.just-done .heart, .music-btn.playing svg { animation: none; }
+  .shake, .hint-from .seat, .hint-to .seat, .hint-from .cat:last-child .cat-in { animation-duration: .01s; }
 }
 </style>
 </head>
@@ -356,11 +372,15 @@ button { font: inherit; color: inherit; }
   <header class="top">
     <h1 class="brand">
       <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-        <path d="M5 17 L7 3 L17 11 H23 L33 3 L35 17 V34 Q35 37 32 37 H8 Q5 37 5 34 Z" fill="var(--kraft)"/>
-        <path d="M5 21 H35" stroke="var(--kraft-line)" stroke-width="2.4"/>
-        <circle cx="14" cy="16" r="2.3" fill="var(--ink)"/><circle cx="26" cy="16" r="2.3" fill="var(--ink)"/>
+        <rect x="7" y="9" width="3" height="20" rx="1" fill="var(--iron)"/><rect x="30" y="9" width="3" height="20" rx="1" fill="var(--iron)"/>
+        <rect x="4" y="10" width="32" height="4.5" rx="1.5" fill="var(--wood)"/><rect x="4" y="17" width="32" height="4.5" rx="1.5" fill="var(--wood)"/>
+        <path d="M15.2 19.5 L15.8 13 L19 16.3 H22 L25.2 13 L25.8 19.5 Z" fill="var(--ink)"/>
+        <ellipse cx="20.5" cy="20" rx="5.6" ry="4.6" fill="var(--ink)"/><ellipse cx="20.5" cy="26" rx="6.5" ry="3.4" fill="var(--ink)"/>
+        <circle cx="18.4" cy="19.6" r="1" fill="var(--wall)"/><circle cx="22.6" cy="19.6" r="1" fill="var(--wall)"/>
+        <rect x="2" y="27" width="36" height="5" rx="1.5" fill="var(--wood-light)"/>
+        <rect x="7" y="32" width="3" height="6" rx="1" fill="var(--iron)"/><rect x="30" y="32" width="3" height="6" rx="1" fill="var(--iron)"/>
       </svg>
-      Kocie Pudła
+      Kocie Ławki
     </h1>
     <div class="hud">
       <div class="pill lvl">
@@ -381,7 +401,7 @@ button { font: inherit; color: inherit; }
   </div>
 
   <main class="board-wrap" id="boardWrap">
-    <div class="board" id="board" role="group" aria-label="Pudła z kotami"></div>
+    <div class="board" id="board" role="group" aria-label="Ławki z kotami"></div>
     <div class="toast" id="toast" role="status" hidden></div>
   </main>
 
@@ -395,8 +415,8 @@ button { font: inherit; color: inherit; }
       <span>Od nowa</span><span class="kbd">R</span>
     </button>
     <button class="tool" id="extra" type="button">
-      <svg viewBox="0 0 24 24"><path d="M3 8.5 12 4l9 4.5v8L12 21l-9-4.5z"/><path d="m3 8.5 9 4.5 9-4.5M12 13v8"/></svg>
-      <span>Pudło +1</span><span class="count" id="extraCount">1</span>
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 10.5h18M2 14.5h20M5 5v10M19 5v10M5.5 14.5V20M18.5 14.5V20"/></svg>
+      <span>Ławka +1</span><span class="count" id="extraCount">1</span>
     </button>
     <button class="tool" id="hint" type="button">
       <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.6.5.8 1.2.8 1.9V16h6v-.2c0-.7.3-1.4.8-1.9A6.5 6.5 0 0 0 12 2.5z"/></svg>
@@ -408,7 +428,7 @@ button { font: inherit; color: inherit; }
 <div class="win" id="win" hidden>
   <div class="win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
     <div class="win-cat" id="winCat"></div>
-    <h2 id="winTitle">Wszystkie koty w pudłach!</h2>
+    <h2 id="winTitle">Wszystkie koty na swoich ławkach!</h2>
     <p class="sub" id="winSub"></p>
     <div class="stats" id="winStats"></div>
     <p class="fact"><span class="lab">Kocia ciekawostka</span><span id="winFact"></span></p>
@@ -764,7 +784,7 @@ const audio = (() => {
   }
   function purr() { play(pick(CATS.purr, 'purr'), { vol: 1, maxDur: 2.8, fadeOut: .7 }); }
 
-  /* Kot ląduje w kartonie: ciche, stłumione "tup". */
+  /* Kot ląduje na ławce: krótkie, drewniane "tok". */
   function thud() {
     if (!save.sound || fileMode || !ensure()) return;
     const t = ctx.currentTime + .005;
@@ -772,8 +792,8 @@ const audio = (() => {
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
     const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     n.buffer = b;
-    f.type = 'lowpass'; f.frequency.value = 650; f.Q.value = 1.2;
-    g.gain.value = .55;
+    f.type = 'bandpass'; f.frequency.value = 1050; f.Q.value = 1.6;
+    g.gain.value = .8;
     n.connect(f).connect(g).connect(sfxBus);
     n.start(t);
   }
@@ -946,21 +966,21 @@ function hashDelay(id) {
   return -((h % 70) / 10) + 's';
 }
 
-function boxHTML(t, i) {
+function benchHTML(t, i) {
   const done = isDone(t);
   const lift = S.sel === i ? groupSize(t) : 0;
   const names = t.map(c => hidden(c) ? 'śpiący kot' : breedOf(c).name);
-  const label = `Pudło ${i + 1}: ` + (names.length ? names.join(', ') + ' (od dołu)' : 'puste') + (done ? ', komplet' : '');
+  const label = `Ławka ${i + 1}: ` + (names.length ? names.join(', ') + ' (od lewej)' : 'pusta') + (done ? ', komplet' : '');
   const cats = t.map((cat, k) => {
     const h = hidden(cat);
     const cls = 'cat' + (h ? ' sleep' : '') + (lift && k >= t.length - lift ? ' lift' : '') + (S.justRevealed.has(cat.id) ? ' reveal' : '');
     return `<span class="${cls}" data-id="${cat.id}"><span class="cat-in" style="--d:${hashDelay(cat.id)}">${h ? SLEEP_SVG : catSVG(breedOf(cat), done)}</span></span>`;
   }).join('');
-  const cls = 'box' + (done ? ' done' : '') + (S.justDone === i ? ' just-done' : '') + (S.sel === i ? ' sel' : '');
+  const cls = 'bench' + (done ? ' done' : '') + (S.justDone === i ? ' just-done' : '') + (S.sel === i ? ' sel' : '');
   return `<button type="button" class="${cls}" data-i="${i}" aria-label="${label}" aria-pressed="${S.sel === i}">`
-    + `<span class="flap back"></span><span class="flap fl"></span><span class="flap fr"></span>`
-    + `<span class="shell"></span><span class="inside">${cats}</span>`
-    + `<span class="lip"><span class="num">${i + 1}</span></span>`
+    + `<span class="posts"></span><span class="backrest"></span>`
+    + `<span class="seat"><span class="num">${i + 1}</span></span>`
+    + `<span class="inside">${cats}</span>`
     + `<span class="heart">${HEART}</span></button>`;
 }
 
@@ -997,29 +1017,29 @@ function flip(before) {
   });
 }
 
+/* Ławka: 4 koty obok siebie. Szukamy liczby kolumn, przy której koty są największe. */
 function fitBoard() {
   const n = S.tubes.length;
   const cs = getComputedStyle(wrap);
   const W = wrap.clientWidth;
   const H = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-  let best = { s: 0, per: n };
-  for (let rows = 1; rows <= Math.min(4, n); rows++) {
-    const per = Math.ceil(n / rows);
-    const realRows = Math.ceil(n / per);
-    const sW = (W - 14 * per - 6 * (per - 1)) / (1.16 * per + .26 * (per - 1));
-    const sH = (H - 22 * realRows - 8 * (realRows - 1)) / (3.86 * realRows + .3 * (realRows - 1));
-    const s = Math.min(sW, sH, 86);
-    if (s > best.s + .5) best = { s, per };
+  let best = { s: 0, cols: 1 };
+  for (let cols = 1; cols <= Math.min(4, n); cols++) {
+    const rows = Math.ceil(n / cols);
+    const sW = (W - 12 * cols - 10 * (cols - 1)) / (4.36 * cols + .3 * (cols - 1));
+    const sH = (H - 3 * rows - 8 * (rows - 1)) / (1.52 * rows + .22 * (rows - 1));
+    const s = Math.min(sW, sH, 80);
+    if (s > best.s + .5) best = { s, cols };
   }
-  const s = Math.max(26, Math.floor(best.s));
+  const s = Math.max(24, Math.floor(best.s));
   board.style.setProperty('--s', s + 'px');
-  board.style.maxWidth = Math.ceil(best.per * (1.16 * s + 14) + (best.per - 1) * (.26 * s + 6) + 2) + 'px';
+  board.style.maxWidth = Math.ceil(best.cols * (4.36 * s + 12) + (best.cols - 1) * (.3 * s + 10) + 2) + 'px';
 }
 
 function render() {
   const before = captureRects();
-  const focusedIdx = document.activeElement && document.activeElement.classList.contains('box') ? document.activeElement.dataset.i : null;
-  board.innerHTML = S.tubes.map(boxHTML).join('');
+  const focusedIdx = document.activeElement && document.activeElement.classList.contains('bench') ? document.activeElement.dataset.i : null;
+  board.innerHTML = S.tubes.map(benchHTML).join('');
   fitBoard();
   if (focusedIdx !== null && board.children[focusedIdx]) board.children[focusedIdx].focus({ preventScroll: true });
   flip(before);
@@ -1086,10 +1106,10 @@ function showTip() {
   let key = null, text = '';
   if (S.level <= 2 && !save.tips.rules) {
     key = 'rules';
-    text = '<b>Stuknij pudło</b>, żeby podnieść koty z góry, potem <b>stuknij drugie</b>. Kot usiądzie tylko na kocie tej samej rasy albo w pustym pudle. Cel: <b>cztery takie same koty w każdym pudle</b>.';
+    text = '<b>Stuknij ławkę</b>, żeby podnieść koty z jej prawego końca, potem <b>stuknij drugą</b>. Kot przysiądzie się tylko do kota tej samej rasy albo na pustej ławce. Cel: <b>cztery takie same koty na każdej ławce</b>.';
   } else if (S.cfg.sleepy && !save.tips.sleepy) {
     key = 'sleepy';
-    text = '<b>Śpiochy!</b> Część kotów drzemie pod kocykami. Budzą się, gdy znajdą się na samej górze pudła.';
+    text = '<b>Śpiochy!</b> Część kotów drzemie pod kocykami. Budzą się, gdy siedzą na samym końcu ławki.';
   }
   tip.hidden = !key;
   tip.dataset.key = key || '';
@@ -1118,8 +1138,8 @@ function onBox(i) {
   render();
   flash(i, 'shake', 400);
   audio.meow(grumpy, 'grump');
-  if (r === 'full') toast('To pudło jest pełne.');
-  else if (mismatchToasts++ < 3) toast('Kot siada tylko na kocie swojej rasy albo w pustym pudle.');
+  if (r === 'full') toast('Na tej ławce nie ma już miejsca.');
+  else if (mismatchToasts++ < 3) toast('Kot przysiada się tylko do kota swojej rasy albo na pustą ławkę.');
 }
 
 function doMove(from, to) {
@@ -1138,7 +1158,7 @@ function doMove(from, to) {
   if (woke.length) audio.meow(woke[0], 'yawn', .25);
   if (done) { audio.purr(); audio.meow(S.breeds[d[0].c], 'mrrp', .5); }
   if (S.tubes.every(t => !t.length || isDone(t))) { win(); return; }
-  if (!anyMove()) toast('Brak ruchów. Cofnij albo dodaj pudło.', 4200);
+  if (!anyMove()) toast('Brak ruchów. Cofnij albo dostaw ławkę.', 4200);
 }
 
 function anyMove() {
@@ -1165,9 +1185,9 @@ function restart() {
   render();
 }
 
-function addBox() {
+function addBench() {
   if (S.won) return;
-  if (S.extraUsed) { toast('Dodatkowe pudło już stoi na planszy.'); return; }
+  if (S.extraUsed) { toast('Dodatkowa ławka już stoi.'); return; }
   S.history.push(snap());
   S.tubes.push([]);
   S.extraUsed = true;
@@ -1180,7 +1200,7 @@ function addBox() {
 function hint() {
   if (S.won) return;
   const path = solve(S.tubes.map(t => t.map(c => c.c)), CAP, 60000);
-  if (!path) { toast('Stąd nie widać wyjścia. Cofnij kilka ruchów albo dodaj pudło.', 3600); return; }
+  if (!path) { toast('Stąd nie widać wyjścia. Cofnij kilka ruchów albo dostaw ławkę.', 3600); return; }
   if (!path.length) return;
   const m = path[0];
   if (S.sel !== null) { S.sel = null; render(); }
@@ -1217,7 +1237,7 @@ function win() {
 function burst() {
   if (reduceMotion) return;
   const host = $('#win');
-  const colors = ['var(--accent)', 'var(--kraft)', 'var(--good)', 'var(--ink-soft)'];
+  const colors = ['var(--accent)', 'var(--wood)', 'var(--good)', 'var(--ink-soft)'];
   for (let i = 0; i < 18; i++) {
     const p = document.createElement('span');
     p.className = 'paw';
@@ -1237,12 +1257,12 @@ function burst() {
 
 /* ---------- wiring ---------- */
 board.addEventListener('click', e => {
-  const b = e.target.closest('.box');
+  const b = e.target.closest('.bench');
   if (b) onBox(+b.dataset.i);
 });
 $('#undo').addEventListener('click', undo);
 $('#restart').addEventListener('click', restart);
-$('#extra').addEventListener('click', addBox);
+$('#extra').addEventListener('click', addBench);
 $('#hint').addEventListener('click', hint);
 $('#prevLvl').addEventListener('click', () => { if (S.level > 1) startLevel(S.level - 1); });
 $('#nextLvl').addEventListener('click', () => { if (S.level < save.max) startLevel(S.level + 1); });
