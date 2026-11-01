@@ -154,8 +154,9 @@ button { font: inherit; color: inherit; }
 .board-wrap { position: relative; min-height: 0; padding-block: 18px 10px; display: grid; align-items: center; }
 .board {
   --s: 60px;
-  display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
-  column-gap: calc(var(--s) * .3 + 10px);
+  --cols: 1;
+  display: grid; grid-template-columns: repeat(var(--cols), auto); justify-content: center; align-content: center;
+  column-gap: calc(var(--s) * 1.1 + 24px);
   row-gap: calc(var(--s) * .22 + 8px);
   margin: 0 auto;
   width: 100%;
@@ -199,6 +200,8 @@ button { font: inherit; color: inherit; }
   margin: 0 auto;
   display: flex; flex-direction: row;
 }
+/* prawa kolumna jest lustrzana: koty siedzą przy prawym brzegu, a ruchomy jest kot od strony środka */
+.bench.mirror .inside { flex-direction: row-reverse; }
 .bench:hover .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), inset 0 0 0 2px rgba(255, 255, 255, .18); }
 .bench.sel .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), 0 0 0 3px var(--accent); }
 .bench.done .seat { box-shadow: inset 0 -3px 0 var(--wood-dark), 0 0 0 2px var(--good); }
@@ -374,8 +377,8 @@ button { font: inherit; color: inherit; }
       <div class="pill"><span class="lab">Ruchy</span><span class="val" id="moves" aria-live="polite">0</span></div>
       <span class="tag" id="sleepyTag" hidden>Śpiochy</span>
     </div>
-    <button class="icon-btn music-btn" id="music" type="button" aria-label="Muzyka" aria-pressed="true"></button>
-    <button class="icon-btn sound" id="sound" type="button" aria-label="Efekty dźwiękowe" aria-pressed="true"></button>
+    <button class="icon-btn music-btn" id="music" type="button" aria-label="Muzyka" aria-pressed="true" hidden></button>
+    <button class="icon-btn sound" id="sound" type="button" aria-label="Efekty dźwiękowe" aria-pressed="true" hidden></button>
   </header>
 
   <div class="tip" id="tip" hidden>
@@ -672,7 +675,7 @@ const VOICES = [
 ];
 const ALL_CAT_FILES = [...new Set([...Object.values(CATS).flat(), ...VOICES.flatMap(v => v.samples)])];
 
-const audio = (() => {
+const audioEngine = (() => {
   const MUSIC_VOL = .8;
   let ctx = null, sfxBus = null, musicGain = null;
   let fileMode = false;               // strona otwarta z dysku: fetch nie działa, gramy przez <audio>
@@ -879,6 +882,13 @@ const audio = (() => {
   };
 })();
 
+/* Dźwięk na razie wyłączony: gra używa cichej zaślepki. Zmień na true, żeby wrócić do nagrań. */
+const AUDIO_ENABLED = false;
+const audio = AUDIO_ENABLED ? audioEngine : {
+  meow() {}, purr() {}, thud() {}, win() {}, startMusic() {}, stopMusic() {}, duck() {}, preload() {},
+  isPlaying: () => false, set onTrack(fn) {},
+};
+
 /* ---------- state ---------- */
 const $ = s => document.querySelector(s);
 const board = $('#board'), wrap = $('#boardWrap'), toastEl = $('#toast');
@@ -954,7 +964,7 @@ function benchHTML(t, i) {
   const done = isDone(t);
   const lift = S.sel === i ? groupSize(t) : 0;
   const names = t.map(c => hidden(c) ? 'śpiący kot' : breedOf(c).name);
-  const label = `Ławka ${i + 1}: ` + (names.length ? names.join(', ') + ' (od lewej)' : 'pusta') + (done ? ', komplet' : '');
+  const label = `Ławka ${i + 1}: ` + (names.length ? names.join(', ') + ' (od brzegu do środka)' : 'pusta') + (done ? ', komplet' : '');
   const cats = t.map((cat, k) => {
     const h = hidden(cat);
     const cls = 'cat' + (h ? ' sleep' : '') + (lift && k >= t.length - lift ? ' lift' : '') + (S.justRevealed.has(cat.id) ? ' reveal' : '');
@@ -1007,16 +1017,18 @@ function fitBoard() {
   const W = wrap.clientWidth;
   const H = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   let best = { s: 0, cols: 1 };
-  for (let cols = 1; cols <= Math.min(4, n); cols++) {
+  for (let cols = 1; cols <= Math.min(2, n); cols++) {
     const rows = Math.ceil(n / cols);
-    const sW = (W - 12 * cols - 10 * (cols - 1)) / (4.36 * cols + .3 * (cols - 1));
+    const sW = (W - 12 * cols - 24 * (cols - 1)) / (4.36 * cols + 1.1 * (cols - 1));
     const sH = (H - 3 * rows - 8 * (rows - 1)) / (1.52 * rows + .22 * (rows - 1));
     const s = Math.min(sW, sH, 80);
     if (s > best.s + .5) best = { s, cols };
   }
   const s = Math.max(24, Math.floor(best.s));
   board.style.setProperty('--s', s + 'px');
-  board.style.maxWidth = Math.ceil(best.cols * (4.36 * s + 12) + (best.cols - 1) * (.3 * s + 10) + 2) + 'px';
+  board.style.setProperty('--cols', best.cols);
+  board.style.maxWidth = 'none';
+  [...board.children].forEach((el, i) => el.classList.toggle('mirror', best.cols === 2 && i % 2 === 1));
 }
 
 function render() {
@@ -1089,10 +1101,10 @@ function showTip() {
   let key = null, text = '';
   if (S.level <= 2 && !save.tips.rules) {
     key = 'rules';
-    text = '<b>Stuknij ławkę</b>, żeby podnieść koty z jej prawego końca, potem <b>stuknij drugą</b>. Kot przysiądzie się tylko do kota tej samej rasy albo na pustej ławce. Cel: <b>cztery takie same koty na każdej ławce</b>.';
+    text = '<b>Stuknij ławkę</b>, żeby podnieść koty z jej wewnętrznego końca (od strony środka), potem <b>stuknij drugą</b>. Kot przysiądzie się tylko do kota tej samej rasy albo na pustej ławce. Cel: <b>cztery takie same koty na każdej ławce</b>.';
   } else if (S.cfg.sleepy && !save.tips.sleepy) {
     key = 'sleepy';
-    text = '<b>Śpiochy!</b> Część kotów drzemie pod kocykami. Budzą się, gdy siedzą na samym końcu ławki.';
+    text = '<b>Śpiochy!</b> Część kotów drzemie pod kocykami. Budzą się, gdy siedzą na wewnętrznym końcu ławki.';
   }
   tip.hidden = !key;
   tip.dataset.key = key || '';
@@ -1278,8 +1290,8 @@ document.addEventListener('keydown', e => {
   if (k === 'z' || k === 'backspace') { e.preventDefault(); undo(); }
   else if (k === 'r') restart();
   else if (k === 'h') hint();
-  else if (k === 'm') toggleMusic();
-  else if (k === 's') toggleSound();
+  else if (AUDIO_ENABLED && k === 'm') toggleMusic();
+  else if (AUDIO_ENABLED && k === 's') toggleSound();
   else if (k === 'escape' && S.sel !== null) { S.sel = null; render(); }
 });
 new ResizeObserver(() => { if (S) fitBoard(); }).observe(wrap);
