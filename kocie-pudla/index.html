@@ -174,23 +174,6 @@ button { font: inherit; color: inherit; }
   content: ""; position: absolute; left: 6%; right: 6%; bottom: -5px; height: 10px;
   border-radius: 50%; background: var(--shadow);
 }
-.posts {
-  position: absolute;
-  left: calc(var(--s) * .16 + 4px); right: calc(var(--s) * .16 + 4px);
-  top: calc(var(--s) * .34); bottom: calc(var(--s) * .3);
-  border-left: calc(var(--s) * .07 + 2px) solid var(--iron);
-  border-right: calc(var(--s) * .07 + 2px) solid var(--iron);
-  border-radius: 3px 3px 0 0;
-}
-.backrest {
-  position: absolute;
-  left: calc(var(--s) * .08 + 3px); right: calc(var(--s) * .08 + 3px);
-  top: calc(var(--s) * .4); height: calc(var(--s) * .62);
-  background:
-    linear-gradient(180deg, var(--wood-light), var(--wood) 70%, var(--wood-dark)) 0 0 / 100% 30% no-repeat,
-    linear-gradient(180deg, var(--wood-light), var(--wood) 70%, var(--wood-dark)) 0 64% / 100% 30% no-repeat;
-  border-radius: 3px;
-}
 .seat {
   position: absolute;
   left: calc(var(--s) * .04); right: calc(var(--s) * .04);
@@ -445,15 +428,15 @@ const CAP = 4;
 
 /* Rasy. Każda ma inne futro, znak szczególny i kolor obroży, żeby dało się je odróżnić nie tylko po kolorze. */
 const BREEDS = [
-  { name: 'Rudy',     fur: '#F0893C', shade: '#BF5A1B', belly: '#FCD7AE', ear: '#F5A9A0', eyeL: '#5DAA3C', eyeR: '#5DAA3C', nose: '#E07A86', line: '#5A2F14', whisker: '#5A2F14', collar: '#2E9B6B', mark: 'stripes' },
-  { name: 'Czarny',   fur: '#2A2A36', shade: '#16161E', belly: '#3A3A4A', ear: '#7A5566', eyeL: '#F3C623', eyeR: '#F3C623', nose: '#6A4556', line: '#C9C2D8', whisker: '#D8D2E6', collar: '#E5484D', mark: 'none' },
-  { name: 'Biały',    fur: '#FBFBF7', shade: '#DADAD0', belly: '#FFFFFF', ear: '#F6A3B5', eyeL: '#4AA3E8', eyeR: '#E3A332', nose: '#EE8FA2', line: '#7B6A6E', whisker: '#9C9396', collar: '#3A6FE0', mark: 'none' },
-  { name: 'Szary',    fur: '#8F99A8', shade: '#6A7484', belly: '#EEF1F4', ear: '#E9A9B5', eyeL: '#9BCB43', eyeR: '#9BCB43', nose: '#D98794', line: '#3A3F4A', whisker: '#3A3F4A', collar: '#F2C230', mark: 'blaze' },
-  { name: 'Syjamski', fur: '#F0E2CA', shade: '#5A4131', belly: '#F8F0E0', ear: '#C79A86', eyeL: '#3D8EE0', eyeR: '#3D8EE0', nose: '#3A2A21', line: '#3A2A21', whisker: '#3A2A21', collar: '#8E5AD8', mark: 'mask' },
-  { name: 'Szylkret', fur: '#FAF6EE', shade: '#D8D0BF', belly: '#FFFFFF', ear: '#F3ACAF', eyeL: '#D9A23A', eyeR: '#D9A23A', nose: '#E58A92', line: '#4A3A30', whisker: '#6E6258', collar: '#16A6A0', mark: 'patches', patchA: '#E8863A', patchB: '#2F2A2B' },
-  { name: 'Pręgus',   fur: '#A97C54', shade: '#5B3E26', belly: '#DCC2A0', ear: '#E3A08F', eyeL: '#86B83F', eyeR: '#86B83F', nose: '#C9707A', line: '#3B2717', whisker: '#3B2717', collar: '#EC6FAE', mark: 'tabby' },
-  { name: 'Sfinks',   fur: '#ECBDAE', shade: '#C98D7C', belly: '#F5D3C8', ear: '#DB9181', eyeL: '#5FC4AE', eyeR: '#5FC4AE', nose: '#C9707A', line: '#6B3F35', whisker: '#6B3F35', collar: '#F28B30', mark: 'wrinkles' },
-  { name: 'Bengal',   fur: '#E3B04E', shade: '#5E3F1A', belly: '#F6DEA8', ear: '#E9A58A', eyeL: '#48A157', eyeR: '#48A157', nose: '#C5705F', line: '#4A3014', whisker: '#4A3014', collar: '#4950D6', mark: 'spots' },
+  { name: 'Zielony',   fur: '#5ACD63', shade: '#2A9A43', belly: '#D2F7CC', ear: '#F7A8B8', eyeL: '#2E7DE0', eyeR: '#2E7DE0', nose: '#E8708A', line: '#1F4D26', whisker: '#1F4D26', collar: '#FF5A8A', mark: 'stripes' },
+  { name: 'Czarny',    fur: '#2A2A36', shade: '#16161E', belly: '#3E3E50', ear: '#8A5A72', eyeL: '#FFD23A', eyeR: '#FFD23A', nose: '#7A4A62', line: '#C9C2D8', whisker: '#D8D2E6', collar: '#FF4D4D', mark: 'none' },
+  { name: 'Żółty',     fur: '#FFD03A', shade: '#E39A00', belly: '#FFF3BC', ear: '#FFA9A0', eyeL: '#3B8BEB', eyeR: '#3B8BEB', nose: '#F07A6A', line: '#6B4700', whisker: '#6B4700', collar: '#7A4FE0', mark: 'none' },
+  { name: 'Niebieski', fur: '#4A7BF0', shade: '#2A4FB8', belly: '#D4E2FF', ear: '#F2A6C8', eyeL: '#FFD23A', eyeR: '#FFD23A', nose: '#F07A9A', line: '#152A66', whisker: '#152A66', collar: '#FFB020', mark: 'blaze' },
+  { name: 'Fioletowy', fur: '#A56AEA', shade: '#6A36B4', belly: '#EEDDFF', ear: '#F4A6D0', eyeL: '#3FD0B0', eyeR: '#3FD0B0', nose: '#3A1D66', line: '#2F1658', whisker: '#2F1658', collar: '#2EC4A0', mark: 'mask' },
+  { name: 'Różowy',    fur: '#FF7EB8', shade: '#D2468A', belly: '#FFE3F0', ear: '#FFC2DC', eyeL: '#7B4DE0', eyeR: '#7B4DE0', nose: '#B0306A', line: '#6A1640', whisker: '#6A1640', collar: '#2E9BF0', mark: 'patches', patchA: '#FFC4DE', patchB: '#C2367A' },
+  { name: 'Czerwony',  fur: '#F0443A', shade: '#AE2017', belly: '#FFCDC6', ear: '#FFB0A8', eyeL: '#FFD23A', eyeR: '#FFD23A', nose: '#7A1410', line: '#5A0E0A', whisker: '#5A0E0A', collar: '#30C46A', mark: 'tabby' },
+  { name: 'Brązowy',   fur: '#9C6440', shade: '#5C381E', belly: '#E6C6A6', ear: '#E8A08C', eyeL: '#7CC63E', eyeR: '#7CC63E', nose: '#5A2E1A', line: '#3A2010', whisker: '#3A2010', collar: '#FF8A2A', mark: 'wrinkles' },
+  { name: 'Turkusowy', fur: '#28C2C6', shade: '#12858C', belly: '#C8F4F2', ear: '#F7A8C0', eyeL: '#FF8A2A', eyeR: '#FF8A2A', nose: '#E06A8A', line: '#0B4448', whisker: '#0B4448', collar: '#E8457A', mark: 'spots' },
 ];
 
 function rngFor(seed) {
@@ -630,6 +613,7 @@ function catSVG(b, happy) {
     + `<ellipse cx="50" cy="71" rx="15" ry="9" fill="${b.belly}"/>`
     + `<path d="${ear}" fill="${earL}"/><path d="${earIn}" fill="${b.ear}"/>`
     + `<g transform="translate(100 0) scale(-1 1)"><path d="${ear}" fill="${earR}"/><path d="${earIn}" fill="${b.ear}"/></g>`
+    + `<path d="M41 19 L44 7 L49 15 L53 5 L57 15 L61 9 L60 20 Z" fill="${b.fur}"/>`
     + `<ellipse cx="50" cy="40" rx="31" ry="25" fill="${b.fur}"/>${head}${muzzle}${eyes}`
     + `<path d="M46.5 46.5 h7 l-3.5 4 z" fill="${b.nose}"/>`
     + `<path d="M50 50.5 q-2.5 4 -6 2.2 M50 50.5 q2.5 4 6 2.2" stroke="${b.line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
@@ -676,15 +660,15 @@ const CATS = {
 };
 /* Głos każdej rasy (kolejność jak w BREEDS): ulubione nagrania i wysokość odtwarzania. */
 const VOICES = [
-  { rate: 1.0,  samples: ['cat-01.mp3', 'cat-02.mp3'] },  // Rudy
-  { rate: .86,  samples: ['cat-05.mp3', 'cat-03.mp3'] },  // Czarny: niżej
-  { rate: 1.14, samples: ['cat-04.mp3', 'cat-02.mp3'] },  // Biały: wyżej
-  { rate: .95,  samples: ['cat-02.mp3', 'cat-05.mp3'] },  // Szary
-  { rate: 1.0,  samples: ['cat-06.mp3'] },                // Syjamski: prawdziwy syjam
-  { rate: 1.06, samples: ['cat-01.mp3', 'cat-04.mp3'] },  // Szylkret
-  { rate: .92,  samples: ['cat-03.mp3', 'cat-01.mp3'] },  // Pręgus
-  { rate: 1.2,  samples: ['cat-04.mp3', 'cat-05.mp3'] },  // Sfinks
-  { rate: 1.1,  samples: ['cat-02.mp3', 'cat-04.mp3'] },  // Bengal
+  { rate: 1.0,  samples: ['cat-01.mp3', 'cat-02.mp3'] },  // Zielony
+  { rate: .86,  samples: ['cat-05.mp3', 'cat-03.mp3'] },  // Czarny
+  { rate: 1.14, samples: ['cat-04.mp3', 'cat-02.mp3'] },  // Żółty
+  { rate: .95,  samples: ['cat-02.mp3', 'cat-05.mp3'] },  // Niebieski
+  { rate: 1.0,  samples: ['cat-06.mp3'] },                // Fioletowy
+  { rate: 1.06, samples: ['cat-01.mp3', 'cat-04.mp3'] },  // Różowy
+  { rate: .92,  samples: ['cat-03.mp3', 'cat-01.mp3'] },  // Czerwony
+  { rate: 1.2,  samples: ['cat-04.mp3', 'cat-05.mp3'] },  // Brązowy
+  { rate: 1.1,  samples: ['cat-02.mp3', 'cat-04.mp3'] },  // Turkusowy
 ];
 const ALL_CAT_FILES = [...new Set([...Object.values(CATS).flat(), ...VOICES.flatMap(v => v.samples)])];
 
@@ -978,7 +962,6 @@ function benchHTML(t, i) {
   }).join('');
   const cls = 'bench' + (done ? ' done' : '') + (S.justDone === i ? ' just-done' : '') + (S.sel === i ? ' sel' : '');
   return `<button type="button" class="${cls}" data-i="${i}" aria-label="${label}" aria-pressed="${S.sel === i}">`
-    + `<span class="posts"></span><span class="backrest"></span>`
     + `<span class="seat"><span class="num">${i + 1}</span></span>`
     + `<span class="inside">${cats}</span>`
     + `<span class="heart">${HEART}</span></button>`;
