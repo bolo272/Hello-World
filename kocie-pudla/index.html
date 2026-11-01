@@ -640,381 +640,238 @@ function loadSave() {
 const save = loadSave();
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
 
-/* ---------- sound: synthesized cat voices and lo-fi background music ---------- */
-
-/* Głos każdej rasy (ta sama kolejność co BREEDS): wysokość, chrypka, "rozmiar pyszczka" i ulubione odgłosy. */
-const VOICES = [
-  { f0: 560, rasp: .06, formant: 1.3,  kinds: ['meow', 'mrrp', 'meow', 'mew'] },   // Rudy
-  { f0: 455, rasp: .14, formant: 1.2,  kinds: ['mrow', 'meow', 'mrrp'] },          // Czarny: niski
-  { f0: 690, rasp: 0,   formant: 1.42, kinds: ['mew', 'meow', 'mew', 'chirp'] },   // Biały: delikatny
-  { f0: 540, rasp: .05, formant: 1.3,  kinds: ['meow', 'mrrp', 'meow'] },          // Szary
-  { f0: 610, rasp: .42, formant: 1.25, kinds: ['mrow', 'meow', 'mrow'], len: 1.15, vol: 1.1 }, // Syjamski: głośny, chrapliwy
-  { f0: 600, rasp: .08, formant: 1.35, kinds: ['meow', 'mew', 'mrrp'] },           // Szylkret
-  { f0: 500, rasp: .12, formant: 1.25, kinds: ['mrrp', 'meow', 'mrow'] },          // Pręgus
-  { f0: 720, rasp: .22, formant: 1.45, kinds: ['mew', 'chirp', 'meow', 'mew'] },   // Sfinks: gaduła
-  { f0: 580, rasp: .06, formant: 1.35, kinds: ['chirp', 'mrrp', 'meow', 'chirp'] }, // Bengal: ćwierka
+/* ---------- sound: real recordings of cats and piano (details in sounds/CREDITS.md) ---------- */
+const SOUND_DIR = 'sounds/';
+const MUSIC = [
+  { file: 'satie-gymnopedie-1.mp3', title: 'Erik Satie – Gymnopédie nr 1', by: 'gra Robin Alciatore (Musopen)' },
+  { file: 'satie-gnossienne-1.mp3', title: 'Erik Satie – Gnossienne nr 1', by: 'gra La Pianista' },
 ];
-
-/* Formanty samogłosek [F1, F2, F3, głośność]. Miauknięcie to po prostu przejście m → i → a → u. */
-const VOWELS = {
-  m: [300, 950, 2500, .22],
-  i: [420, 2350, 3300, 1],
-  e: [560, 1950, 2950, 1],
-  a: [880, 1500, 2900, 1],
-  u: [400, 820, 2600, .85],
-  r: [480, 1250, 2400, .7],
+/* Wycięte miauknięcia (szczegóły w sounds/CREDITS.md), pogrupowane według charakteru. */
+const CATS = {
+  meow:  ['cat-01.mp3', 'cat-02.mp3', 'cat-05.mp3'],
+  short: ['cat-04.mp3'],
+  long:  ['cat-01.mp3', 'cat-05.mp3'],
+  sad:   ['cat-03.mp3'],
+  purr:  [],
 };
-const KINDS = {
-  meow:  { dur: .6,  pitch: 1,    contour: [[0, .8], [.3, 1.3], [.72, 1.06], [1, .72]], vowels: ['m', 'i', 'a', 'a', 'u'] },
-  mew:   { dur: .28, pitch: 1.35, contour: [[0, 1.05], [.4, 1.42], [1, 1.02]], vowels: ['i', 'e', 'a'] },
-  mrrp:  { dur: .36, pitch: .95,  contour: [[0, .78], [.55, .96], [1, 1.4]], vowels: ['u', 'r', 'a'], trill: .85 },
-  mrow:  { dur: .9,  pitch: .82,  contour: [[0, .72], [.28, 1.18], [.65, 1], [1, .6]], vowels: ['m', 'a', 'a', 'u', 'u'] },
-  chirp: { dur: .15, pitch: 1.3,  contour: [[0, 1], [1, 1.65]], vowels: ['e', 'i'] },
-  grump: { dur: .46, pitch: .62,  contour: [[0, 1], [.4, .96], [1, .7]], vowels: ['u', 'r', 'u'], trill: .8, rasp: .4 },
-  yawn:  { dur: 1,   pitch: .92,  contour: [[0, 1.25], [.3, 1], [1, .55]], vowels: ['a', 'a', 'a', 'u', 'm'], breath: .4 },
-};
-const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+/* Głos każdej rasy (kolejność jak w BREEDS): ulubione nagrania i wysokość odtwarzania. */
+const VOICES = [
+  { rate: 1.0,  samples: ['cat-01.mp3', 'cat-02.mp3'] },  // Rudy
+  { rate: .86,  samples: ['cat-05.mp3', 'cat-03.mp3'] },  // Czarny: niżej
+  { rate: 1.14, samples: ['cat-04.mp3', 'cat-02.mp3'] },  // Biały: wyżej
+  { rate: .95,  samples: ['cat-02.mp3', 'cat-05.mp3'] },  // Szary
+  { rate: 1.0,  samples: ['cat-06.mp3'] },                // Syjamski: prawdziwy syjam
+  { rate: 1.06, samples: ['cat-01.mp3', 'cat-04.mp3'] },  // Szylkret
+  { rate: .92,  samples: ['cat-03.mp3', 'cat-01.mp3'] },  // Pręgus
+  { rate: 1.2,  samples: ['cat-04.mp3', 'cat-05.mp3'] },  // Sfinks
+  { rate: 1.1,  samples: ['cat-02.mp3', 'cat-04.mp3'] },  // Bengal
+];
+const ALL_CAT_FILES = [...new Set([...Object.values(CATS).flat(), ...VOICES.flatMap(v => v.samples)])];
 
 const audio = (() => {
-  const MUSIC_VOL = .5;
-  const BEAT = 60 / 80, STEP = BEAT / 2, SWING = STEP * .18;
-  /* 8 taktów: Fmaj7 Em7 Dm7 G7sus | Am7 Dm9 G13 Cmaj7 — [bas, akord] */
-  const PROG = [
-    [41, [53, 57, 60, 64]], [40, [52, 55, 59, 62]], [38, [53, 57, 60, 62]], [43, [53, 55, 60, 62]],
-    [45, [55, 57, 60, 64]], [38, [53, 57, 60, 64]], [43, [53, 57, 59, 64]], [48, [52, 55, 59, 64]],
-  ];
-  let ctx = null, sfxBus, musicBus, musicIn, keysBus, delayIn, noise;
-  const lastKind = {};
+  const MUSIC_VOL = .8;
+  let ctx = null, sfxBus = null, musicGain = null;
+  let fileMode = false;               // strona otwarta z dysku: fetch nie działa, gramy przez <audio>
+  const raw = new Map(), decoded = new Map(), lastPick = {};
 
   function ensure() {
     if (!ctx) {
       try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
       const comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = .004; comp.release.value = .25;
+      comp.threshold.value = -12; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = .005; comp.release.value = .25;
       comp.connect(ctx.destination);
       sfxBus = ctx.createGain(); sfxBus.gain.value = .9; sfxBus.connect(comp);
-      musicBus = ctx.createGain(); musicBus.gain.value = 0; musicBus.connect(comp);
-      const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 5200; tone.connect(musicBus);
-      musicIn = ctx.createGain(); musicIn.connect(tone);
-      keysBus = ctx.createBiquadFilter(); keysBus.type = 'lowpass'; keysBus.frequency.value = 2300; keysBus.connect(musicIn);
-      const delay = ctx.createDelay(2), fb = ctx.createGain(), wet = ctx.createBiquadFilter(), wetG = ctx.createGain();
-      delay.delayTime.value = BEAT * .75; fb.gain.value = .33;
-      wet.type = 'lowpass'; wet.frequency.value = 2600; wetG.gain.value = .4;
-      delayIn = ctx.createGain(); delayIn.connect(delay);
-      delay.connect(fb).connect(delay);
-      delay.connect(wet).connect(wetG).connect(musicIn);
-      noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-      const d = noise.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      musicGain = ctx.createGain(); musicGain.gain.value = 0; musicGain.connect(comp);
     }
     if (ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
     return ctx;
   }
-  const fx = () => save.sound && ensure();
-  function noiseSrc() { const n = ctx.createBufferSource(); n.buffer = noise; n.loop = true; return n; }
-
-  /* Jedno kocie "zdanie": piłokształtne struny głosowe z wibratem → chrypka/trel → filtry formantowe. */
-  function voice(breed, kindName, at = 0) {
-    const V = VOICES[breed], K = KINDS[kindName];
-    const f0 = V.f0 * K.pitch * (.94 + Math.random() * .12);
-    const dur = K.dur * (.9 + Math.random() * .2) * (V.len || 1);
-    const t0 = ctx.currentTime + .01 + at, t1 = t0 + dur;
-    const rasp = Math.min(1, (V.rasp || 0) + (K.rasp || 0));
-
-    const src = ctx.createOscillator();
-    src.type = 'sawtooth';
-    src.frequency.setValueAtTime(f0 * K.contour[0][1], t0);
-    for (const [p, m] of K.contour.slice(1)) src.frequency.exponentialRampToValueAtTime(f0 * m, t0 + p * dur);
-    const vib = ctx.createOscillator(), vibG = ctx.createGain();
-    vib.frequency.value = 5 + Math.random() * 2.5;
-    vibG.gain.value = f0 * .02;
-    vib.connect(vibG).connect(src.frequency);
-
-    const amp = ctx.createGain();
-    amp.gain.setValueAtTime(.0001, t0);
-    amp.gain.exponentialRampToValueAtTime(1, t0 + Math.min(.05, dur * .18));
-    amp.gain.setValueAtTime(1, t0 + dur * .62);
-    amp.gain.exponentialRampToValueAtTime(.0001, t1);
-    src.connect(amp);
-
-    const n = noiseSrc(), nf = ctx.createBiquadFilter(), ng = ctx.createGain();
-    nf.type = 'highpass'; nf.frequency.value = 1500;
-    ng.gain.value = (K.breath || .06) + rasp * .12;
-    n.connect(nf).connect(ng).connect(amp);
-
-    const mod = ctx.createGain();
-    mod.gain.value = 1;
-    amp.connect(mod);
-    const lfos = [];
-    if (rasp > 0) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = 55 + Math.random() * 30; g.gain.value = rasp * .45;
-      o.connect(g).connect(mod.gain); lfos.push(o);
-    }
-    if (K.trill) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = 24 + Math.random() * 6;
-      g.gain.setValueAtTime(K.trill * .5, t0);
-      g.gain.linearRampToValueAtTime(0, t0 + dur * .55);
-      o.connect(g).connect(mod.gain); lfos.push(o);
-    }
-
-    const vowelGain = ctx.createGain();
-    const bank = [[6, 1], [10, .6], [12, .32]].map(([q, a]) => {
-      const f = ctx.createBiquadFilter(), g = ctx.createGain();
-      f.type = 'bandpass'; f.Q.value = q; g.gain.value = a * 3;
-      mod.connect(f); f.connect(g).connect(vowelGain);
-      return f;
+  function fetchFile(name) {
+    return fetch(SOUND_DIR + name)
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })
+      .catch(() => { if (location.protocol === 'file:') fileMode = true; return null; });
+  }
+  function decode(ab) {
+    return new Promise(res => {
+      try {
+        const p = ctx.decodeAudioData(ab, res, () => res(null));
+        if (p && p.catch) p.catch(() => res(null));
+      } catch (e) { res(null); }
     });
-    K.vowels.forEach((v, i) => {
-      const t = t0 + (i / (K.vowels.length - 1)) * dur * .92;
-      const [F1, F2, F3, loud] = VOWELS[v];
-      [F1, F2, F3].forEach((F, k) => {
-        if (i) bank[k].frequency.linearRampToValueAtTime(F * V.formant, t);
-        else bank[k].frequency.setValueAtTime(F * V.formant, t);
-      });
-      if (i) vowelGain.gain.linearRampToValueAtTime(loud, t);
-      else vowelGain.gain.setValueAtTime(loud, t);
-    });
-    const hp = ctx.createBiquadFilter(), out = ctx.createGain();
-    hp.type = 'highpass'; hp.frequency.value = 280;
-    out.gain.value = .55 * (V.vol || 1);
-    vowelGain.connect(hp).connect(out).connect(sfxBus);
-    [src, vib, n, ...lfos].forEach(o => { o.start(t0); o.stop(t1 + .05); });
   }
-
-  function meow(breed, kind, at = 0) {
-    if (!fx()) return;
-    if (!kind) {
-      const opts = VOICES[breed].kinds.filter(k => k !== lastKind[breed]);
-      kind = opts[Math.floor(Math.random() * opts.length)];
-      lastKind[breed] = kind;
+  /* Krótkie odgłosy pobieramy od razu, a dekodujemy po pierwszym dotknięciu. */
+  function preload() {
+    for (const name of ALL_CAT_FILES) if (!raw.has(name)) raw.set(name, fetchFile(name));
+  }
+  function buffer(name) {
+    if (!decoded.has(name)) {
+      if (!raw.has(name)) raw.set(name, fetchFile(name));
+      decoded.set(name, raw.get(name).then(ab => (ab ? decode(ab) : null)));
     }
-    voice(breed, kind, at);
+    return decoded.get(name);
   }
-
-  /* Kot ląduje w kartonie: miękkie "tup". */
-  function thud() {
-    if (!fx()) return;
-    const t = ctx.currentTime + .005;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(190, t);
-    o.frequency.exponentialRampToValueAtTime(75, t + .12);
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(.35, t + .006);
-    g.gain.exponentialRampToValueAtTime(.0001, t + .17);
-    o.connect(g).connect(sfxBus);
-    o.start(t); o.stop(t + .2);
-    const n = noiseSrc(), f = ctx.createBiquadFilter(), ng = ctx.createGain();
-    f.type = 'lowpass'; f.frequency.value = 1200;
-    ng.gain.setValueAtTime(.0001, t);
-    ng.gain.exponentialRampToValueAtTime(.22, t + .004);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .07);
-    n.connect(f).connect(ng).connect(sfxBus);
-    n.start(t, Math.random()); n.stop(t + .1);
+  function playElement(name, rate, vol, at) {
+    setTimeout(() => {
+      try {
+        const el = new Audio(SOUND_DIR + name);
+        el.preservesPitch = el.mozPreservesPitch = el.webkitPreservesPitch = false;
+        el.playbackRate = rate;
+        el.volume = Math.min(1, vol);
+        const p = el.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) { /* no audio */ }
+    }, at * 1000);
   }
-
-  /* Mruczenie: impulsy ~26 Hz, głośniejszy wydech i cichszy wdech. */
-  function purr() {
-    if (!fx()) return;
-    const t0 = ctx.currentTime + .02;
-    const out = ctx.createGain(), g = out.gain;
-    g.setValueAtTime(.0001, t0);
-    g.linearRampToValueAtTime(.5, t0 + .12);
-    g.linearRampToValueAtTime(.42, t0 + .62);
-    g.linearRampToValueAtTime(.02, t0 + .78);
-    g.linearRampToValueAtTime(.3, t0 + .9);
-    g.linearRampToValueAtTime(.26, t0 + 1.35);
-    g.linearRampToValueAtTime(.0001, t0 + 1.5);
-    out.connect(sfxBus);
-    const pulses = ctx.createGain(); pulses.gain.value = .5;
-    const lfo = ctx.createOscillator(), lg = ctx.createGain();
-    lfo.frequency.setValueAtTime(26, t0); lfo.frequency.setValueAtTime(29, t0 + .8);
-    lg.gain.value = .5;
-    lfo.connect(lg).connect(pulses.gain);
-    const n = noiseSrc(), lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 700;
-    n.connect(lp).connect(pulses);
-    const buzz = ctx.createOscillator(), bl = ctx.createBiquadFilter(), bg = ctx.createGain();
-    buzz.type = 'sawtooth';
-    buzz.frequency.setValueAtTime(26, t0); buzz.frequency.setValueAtTime(29, t0 + .8);
-    bl.type = 'lowpass'; bl.frequency.value = 160; bg.gain.value = .6;
-    buzz.connect(bl).connect(bg).connect(pulses);
-    pulses.connect(out);
-    [lfo, n, buzz].forEach(o => { o.start(t0); o.stop(t0 + 1.55); });
-  }
-
-  /* Pozytywka: używana w muzyce i w fanfarze. */
-  function bell(dest, f, t, vol, decay = 1.2, send = false) {
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .004);
-    g.gain.exponentialRampToValueAtTime(.0001, t + decay);
-    g.connect(dest);
-    if (send) g.connect(delayIn);
-    for (const [r, a] of [[1, 1], [2, .2], [3.01, .07]]) {
-      const o = ctx.createOscillator(), og = ctx.createGain();
-      o.frequency.value = f * r; og.gain.value = a;
-      o.connect(og).connect(g);
-      o.start(t); o.stop(t + decay + .05);
-    }
-  }
-
-  /* Wygrana: fanfara z pozytywki i kocie trio. */
-  function win(breeds) {
-    if (!fx()) return;
-    const t = ctx.currentTime + .02;
-    [72, 76, 79, 84, 88].forEach((m, i) => bell(sfxBus, midi(m), t + i * .09, .12, 1.1));
-    const kinds = ['meow', 'mrrp', 'mew', 'chirp'];
-    breeds.slice(0, 4).forEach((b, i) => voice(b, kinds[i % kinds.length], .5 + i * .24));
-  }
-
-  /* ---- muzyka: leniwy lo-fi na 80 BPM, generowany na bieżąco ---- */
-  let playing = false, timer = 0, nextTime = 0, stepIdx = 0, loops = 0, progress = 0, flourishPending = false, melody = null;
-
-  function nearest(note, chord) {
-    const pcs = chord.map(m => m % 12);
-    for (let d = 0; d < 7; d++) {
-      if (pcs.includes((note + d) % 12)) return note + d;
-      if (pcs.includes((note - d + 120) % 12)) return note - d;
-    }
-    return note;
-  }
-  /* Melodia na 8 taktów: pierwsze 4 takty pytają, kolejne 4 odpowiadają tym samym rytmem i lądują na C. */
-  function makeMelody(seed) {
-    const rnd = rngFor(seed);
-    const pent = [72, 74, 76, 79, 81, 84];
-    const out = new Array(64).fill(null);
-    let idx = 2 + Math.floor(rnd() * 2);
-    for (let s = 0; s < 32; s++) {
-      const pos = s & 7;
-      const w = pos === 0 ? .85 : pos === 4 ? .6 : pos % 2 ? .22 : .4;
-      const r = rnd();
-      if (r > w) continue;
-      idx = Math.max(0, Math.min(pent.length - 1, idx + Math.round((rnd() - .5) * 3.2)));
-      out[s] = { note: pent[idx], imp: r / w };
-    }
-    for (let s = 0; s < 32; s++) if (out[s]) out[s + 32] = { ...out[s] };
-    for (let s = 0; s < 64; s++) {
-      const n = out[s];
-      if (n && (s & 3) === 0) n.note = nearest(n.note, PROG[s >> 3][1]);
-    }
-    out[56] = { note: 72, imp: 0 };
-    for (let s = 57; s < 64; s++) if (out[s] && rnd() < .5) out[s] = null;
-    return out;
-  }
-
-  function keys(f, t, dur, vol) {
-    const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
-    c.frequency.value = f; m.frequency.value = f;
-    mg.gain.setValueAtTime(f * 1.1, t);
-    mg.gain.exponentialRampToValueAtTime(f * .12, t + .4);
-    m.connect(mg).connect(c.frequency);
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .01);
-    g.gain.exponentialRampToValueAtTime(vol * .35, t + .45);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    c.connect(g).connect(keysBus);
-    c.start(t); m.start(t); c.stop(t + dur + .05); m.stop(t + dur + .05);
-  }
-  function bass(f, t, dur, vol) {
-    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), g2 = ctx.createGain();
-    o.type = 'triangle'; o.frequency.value = f;
-    o2.frequency.value = f * 2; g2.gain.value = .35;
-    lp.type = 'lowpass'; lp.frequency.value = 650;
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .015);
-    g.gain.exponentialRampToValueAtTime(vol * .45, t + .25);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(lp); o2.connect(g2).connect(lp); lp.connect(g).connect(musicIn);
-    [o, o2].forEach(x => { x.start(t); x.stop(t + dur + .05); });
-  }
-  function kick(t, vol) {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(130, t);
-    o.frequency.exponentialRampToValueAtTime(45, t + .16);
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .005);
-    g.gain.exponentialRampToValueAtTime(.0001, t + .28);
-    o.connect(g).connect(musicIn);
-    o.start(t); o.stop(t + .3);
-  }
-  function noiseHit(t, vol, type, freq, q, decay) {
-    const n = noiseSrc(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    f.type = type; f.frequency.value = freq; f.Q.value = q;
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .004);
-    g.gain.exponentialRampToValueAtTime(.0001, t + decay);
-    n.connect(f).connect(g).connect(musicIn);
-    n.start(t, Math.random() * 1.5); n.stop(t + decay + .02);
-  }
-
-  function scheduleStep(i, t) {
-    const s = i % 64, bar = s >> 3, pos = s & 7;
-    const [root, chord] = PROG[bar];
-    const tt = t + (pos % 2 ? SWING : 0);
-    const full = i >= 16;
-    if (pos === 0) chord.forEach((m, k) => keys(midi(m), tt + k * .014, BEAT * 3, .06));
-    if (pos === 3 && full) chord.slice(1).forEach(m => keys(midi(m), tt, BEAT * .8, .035));
-    if (full) {
-      if (pos === 0) bass(midi(root), tt, BEAT * 1.5, .3);
-      if (pos === 3) bass(midi(root + 7), tt, BEAT * .6, .2);
-      if (pos === 7) {
-        const next = PROG[(bar + 1) % PROG.length][0];
-        bass(midi(next + (next > root ? -1 : 1)), tt, BEAT * .45, .16);
+  function play(name, { rate = 1, vol = 1, at = 0, maxDur = 0, fadeOut = 0 } = {}) {
+    if (!save.sound || !name) return;
+    if (fileMode) { playElement(name, rate, vol, at); return; }
+    if (!ensure()) return;
+    const when = ctx.currentTime + at;
+    buffer(name).then(buf => {
+      if (!buf) { if (fileMode) playElement(name, rate, vol, 0); return; }
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = buf;
+      src.playbackRate.value = rate;
+      const t0 = Math.max(when, ctx.currentTime);
+      const len = buf.duration / rate;
+      const dur = maxDur ? Math.min(maxDur, len) : len;
+      g.gain.setValueAtTime(vol, t0);
+      if (fadeOut) {
+        g.gain.setValueAtTime(vol, t0 + Math.max(0, dur - fadeOut));
+        g.gain.linearRampToValueAtTime(.0001, t0 + dur);
       }
-      if (pos === 0 || pos === 5) kick(tt, pos ? .3 : .45);
-      if (pos === 2 || pos === 6) noiseHit(tt, .11, 'bandpass', 2200, .9, .2);
-      noiseHit(tt, pos % 2 ? .028 : .045, 'highpass', 7500, .7, .04);
-    }
-    if (i >= 8) {
-      const m = melody[s];
-      if (m && m.imp < .3 + .7 * progress) bell(musicIn, midi(m.note), tt, .055, 1.3, true);
-    }
-    if (flourishPending && pos % 2 === 0) {
-      flourishPending = false;
-      chord.forEach((n, k) => bell(musicIn, midi(n + 24), tt + k * STEP / 2, .045, .9, true));
-    }
-    if (s === 63 && ++loops % 2 === 0) melody = makeMelody(1000 + loops);
+      src.connect(g).connect(sfxBus);
+      src.start(t0);
+      if (dur < len) src.stop(t0 + dur + .02);
+    });
   }
-  function tick() {
-    while (nextTime < ctx.currentTime + .3) {
-      scheduleStep(stepIdx, nextTime);
-      stepIdx++;
-      nextTime += STEP;
-    }
+  function pick(list, key) {
+    const opts = list.length > 1 ? list.filter(x => x !== lastPick[key]) : list;
+    const x = opts[Math.floor(Math.random() * opts.length)];
+    lastPick[key] = x;
+    return x;
   }
-  function rampMusic(points) {
-    const g = musicBus.gain, now = ctx.currentTime;
+
+  /* kind: undefined (zwykłe miau), 'mrrp' (zadowolony), 'chirp', 'grump' (obrażony), 'yawn' (budzi się) */
+  function meow(breed, kind, at = 0) {
+    const v = VOICES[breed];
+    let list = v.samples, rate = v.rate, vol = v.vol || 1;
+    if (kind === 'grump') { list = CATS.sad; rate *= .84; }
+    else if (kind === 'yawn') { list = CATS.long; rate *= .9; vol *= .75; }
+    else if (kind === 'mrrp') { list = CATS.short; rate *= 1.04; }
+    else if (kind === 'chirp') { list = CATS.short; rate *= 1.15; vol *= .8; }
+    play(pick(list, breed + (kind || '')), { rate: rate * (.97 + Math.random() * .06), vol, at });
+  }
+  function purr() { play(pick(CATS.purr, 'purr'), { vol: .9, maxDur: 2.4, fadeOut: .7 }); }
+
+  /* Kot ląduje w kartonie: ciche, stłumione "tup". */
+  function thud() {
+    if (!save.sound || fileMode || !ensure()) return;
+    const t = ctx.currentTime + .005;
+    const len = Math.floor(ctx.sampleRate * .06), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    n.buffer = b;
+    f.type = 'lowpass'; f.frequency.value = 650; f.Q.value = 1.2;
+    g.gain.value = .55;
+    n.connect(f).connect(g).connect(sfxBus);
+    n.start(t);
+  }
+
+  /* Wygrana: kocie trio z ras z tego poziomu. */
+  function win(breeds) {
+    breeds.slice(0, 3).forEach((b, i) => meow(b, i === 1 ? 'mrrp' : undefined, .1 + i * .38));
+  }
+
+  /* ---- muzyka: nagrania fortepianowe grane po kolei, z pamięcią miejsca przy pauzie ---- */
+  let musicOn = false, track = 0, musicSrc = null, musicBuf = null, musicBufIdx = -1, startedAt = 0, offset = 0, gen = 0, musicEl = null;
+  let onTrack = null;
+
+  function fadeMusic(to, secs) {
+    const g = musicGain.gain, now = ctx.currentTime;
     g.cancelScheduledValues(now);
-    g.setValueAtTime(g.value, now);
-    for (const [dt, v, hold] of points) (hold ? g.setValueAtTime : g.linearRampToValueAtTime).call(g, v, now + dt);
+    g.setValueAtTime(Math.max(.0001, g.value), now);
+    g.linearRampToValueAtTime(to, now + secs);
+  }
+  async function playTrack() {
+    const my = ++gen;
+    if (musicBufIdx !== track) {
+      musicBuf = null; musicBufIdx = -1;
+      const ab = await fetchFile(MUSIC[track].file);
+      if (my !== gen || !musicOn) return;
+      if (!ab) { if (fileMode) playElementMusic(); return; }
+      const buf = await decode(ab);
+      if (my !== gen || !musicOn || !buf) return;
+      musicBuf = buf; musicBufIdx = track;
+    }
+    if (offset >= musicBuf.duration - .5) offset = 0;
+    const src = ctx.createBufferSource();
+    src.buffer = musicBuf;
+    src.connect(musicGain);
+    const now = ctx.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(.0001, now);
+    musicGain.gain.linearRampToValueAtTime(MUSIC_VOL, now + (offset ? .8 : 2.5));
+    src.start(now, offset);
+    if (!offset && onTrack) onTrack(MUSIC[track]);
+    startedAt = now - offset;
+    musicSrc = src;
+    src.onended = () => {
+      if (musicSrc !== src) return;
+      musicSrc = null; offset = 0;
+      track = (track + 1) % MUSIC.length;
+      setTimeout(() => { if (musicOn && !musicSrc) playTrack(); }, 1800);
+    };
+  }
+  function playElementMusic() {
+    if (!musicEl) {
+      musicEl = new Audio();
+      musicEl.addEventListener('ended', () => {
+        track = (track + 1) % MUSIC.length;
+        musicEl.src = SOUND_DIR + MUSIC[track].file;
+        if (musicOn) { musicEl.play().catch(() => {}); if (onTrack) onTrack(MUSIC[track]); }
+      });
+      musicEl.src = SOUND_DIR + MUSIC[track].file;
+      if (onTrack) onTrack(MUSIC[track]);
+    }
+    musicEl.volume = MUSIC_VOL;
+    const p = musicEl.play();
+    if (p && p.catch) p.catch(() => {});
   }
   function startMusic() {
-    if (playing || !ensure()) return;
-    playing = true;
-    melody = melody || makeMelody(1000);
-    stepIdx = 0; loops = 0;
-    nextTime = ctx.currentTime + .15;
-    rampMusic([[1.5, MUSIC_VOL]]);
-    tick();
-    timer = setInterval(tick, 40);
+    if (musicOn) return;
+    musicOn = true;
+    if (fileMode) { playElementMusic(); return; }
+    if (!ensure()) return;
+    playTrack();
   }
   function stopMusic() {
-    if (!playing) return;
-    playing = false;
-    clearInterval(timer);
-    rampMusic([[.4, 0]]);
+    if (!musicOn) return;
+    musicOn = false;
+    gen++;
+    if (musicEl) musicEl.pause();
+    if (musicSrc && ctx) {
+      offset = (ctx.currentTime - startedAt) % musicBuf.duration;
+      const src = musicSrc;
+      musicSrc = null;
+      fadeMusic(.0001, .4);
+      src.stop(ctx.currentTime + .45);
+    }
   }
   function duck() {
-    if (playing) rampMusic([[.15, MUSIC_VOL * .25], [2.2, MUSIC_VOL * .25, true], [3.5, MUSIC_VOL]]);
+    if (!musicSrc) return;
+    const g = musicGain.gain, now = ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(MUSIC_VOL * .3, now + .2);
+    g.setValueAtTime(MUSIC_VOL * .3, now + 2.4);
+    g.linearRampToValueAtTime(MUSIC_VOL, now + 4);
   }
 
   return {
-    meow, thud, purr, win, startMusic, stopMusic, duck,
-    isPlaying: () => playing,
-    setProgress: p => { progress = Math.max(0, Math.min(1, p)); },
-    flourish: () => { if (playing) flourishPending = true; },
+    meow, purr, thud, win, startMusic, stopMusic, duck, preload,
+    isPlaying: () => musicOn,
+    set onTrack(fn) { onTrack = fn; },
   };
 })();
 
@@ -1167,7 +1024,6 @@ function render() {
   if (focusedIdx !== null && board.children[focusedIdx]) board.children[focusedIdx].focus({ preventScroll: true });
   flip(before);
   updateHud();
-  audio.setProgress(S.tubes.filter(isDone).length / S.cfg.colors);
   S.justRevealed.clear();
   S.justDone = -1;
 }
@@ -1280,7 +1136,7 @@ function doMove(from, to) {
   render();
   audio.thud();
   if (woke.length) audio.meow(woke[0], 'yawn', .25);
-  if (done) { audio.purr(); audio.meow(S.breeds[d[0].c], 'mrrp', .45); audio.flourish(); }
+  if (done) { audio.purr(); audio.meow(S.breeds[d[0].c], 'mrrp', .5); }
   if (S.tubes.every(t => !t.length || isDone(t))) { win(); return; }
   if (!anyMove()) toast('Brak ruchów. Cofnij albo dodaj pudło.', 4200);
 }
@@ -1453,6 +1309,8 @@ function boot(data) {
   const lvl = d.level || Math.min(save.level, save.max);
   startLevel(lvl, d.level ? d : null);
 }
+audio.onTrack = t => toast(`♪ ${t.title}, ${t.by}`, 4000);
+audio.preload();
 window.claude?.hot?.snapshot?.(snapshot);
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 })();
