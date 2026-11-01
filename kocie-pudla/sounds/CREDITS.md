@@ -1,6 +1,6 @@
 # Dźwięki w Kocich Pudłach
 
-Wszystkie dźwięki to prawdziwe nagrania z [Wikimedia Commons](https://commons.wikimedia.org).
+Wszystkie dźwięki to prawdziwe nagrania z [Wikimedia Commons](https://commons.wikimedia.org) i [Internet Archive](https://archive.org).
 Pliki zostały przycięte, wyrównane głośnościowo i zakodowane do MP3. Nic tu nie jest syntezowane, z wyjątkiem cichego „tup”, gdy kot ląduje w kartonie.
 
 ## Muzyka
@@ -16,3 +16,4 @@ Pliki zostały przycięte, wyrównane głośnościowo i zakodowane do MP3. Nic t
 | --- | --- | --- | --- | --- |
 | `cat-01.mp3` – `cat-05.mp3` | Kot prosi, żeby go wypuścić | Heismark | domena publiczna | [Commons](https://commons.wikimedia.org/wiki/File:Meow_of_a_pleading_cat.oga) |
 | `cat-06.mp3` | Miauknięcie kota syjamskiego | freemaster2 (Freesound) | CC0 | [Commons](https://commons.wikimedia.org/wiki/File:Meow_of_a_Siamese_cat_-_freemaster2.wav) |
+| `purr-1.mp3` | My Purring Cat (Randburg, RPA, 2016) | Neville Smithers, [radio aporee](https://aporee.org) | domena publiczna (Public Domain Mark) | [Internet Archive](https://archive.org/details/aporee_32981_37894) |

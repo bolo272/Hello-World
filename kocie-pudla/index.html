@@ -652,7 +652,7 @@ const CATS = {
   short: ['cat-04.mp3'],
   long:  ['cat-01.mp3', 'cat-05.mp3'],
   sad:   ['cat-03.mp3'],
-  purr:  [],
+  purr:  ['purr-1.mp3'],
 };
 /* Głos każdej rasy (kolejność jak w BREEDS): ulubione nagrania i wysokość odtwarzania. */
 const VOICES = [
@@ -762,7 +762,7 @@ const audio = (() => {
     else if (kind === 'chirp') { list = CATS.short; rate *= 1.15; vol *= .8; }
     play(pick(list, breed + (kind || '')), { rate: rate * (.97 + Math.random() * .06), vol, at });
   }
-  function purr() { play(pick(CATS.purr, 'purr'), { vol: .9, maxDur: 2.4, fadeOut: .7 }); }
+  function purr() { play(pick(CATS.purr, 'purr'), { vol: 1, maxDur: 2.8, fadeOut: .7 }); }
 
   /* Kot ląduje w kartonie: ciche, stłumione "tup". */
   function thud() {
